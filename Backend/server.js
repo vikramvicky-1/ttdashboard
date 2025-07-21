@@ -5,7 +5,7 @@ dotenv.config();
 
 const PORT = process.env.PORT;
 const MONGO_URI = process.env.MONGODB_URI;
-
+// Ensure that the environment variables are set
 mongoose
   .connect(MONGO_URI, {
     useNewUrlParser: true,
