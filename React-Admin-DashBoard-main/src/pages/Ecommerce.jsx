@@ -23,6 +23,7 @@ import {
   rangeColorMapping,
 } from "../data/dummy";
 import useExpenseStore from "../Store/ExpenseStore";
+import useSalesStore from "../Store/SalesStore";
 
 const DropDown = ({ currentMode }) => (
   <div className="w-28 border-1 border-color px-2 py-1 rounded-md">
@@ -48,7 +49,7 @@ const Ecommerce = () => {
     getTotalLoansExpense,
     monthlyExpense,
     totalLoansExpense,
-    loading,
+    loading: expenseLoading,
     getYearlyExpenseSummary,
     yearlyExpenseSummary,
     // Date range filter
@@ -59,18 +60,30 @@ const Ecommerce = () => {
     getDateRangeLoansExpense,
   } = useExpenseStore();
 
+  const {
+    totalSales,
+    loading: salesLoading,
+    getTotalSales,
+    getYearlySales,
+    yearlyTotalSales,
+    getDateRangeTotalSales,
+  } = useSalesStore();
+
   useEffect(() => {
     if (isDateRangeActive && fromDate && toDate) {
       // Use date range filter
       getDateRangeExpense(fromDate, toDate);
       getDateRangeLoansExpense(fromDate, toDate);
+      getDateRangeTotalSales(fromDate, toDate);
     } else {
       // Use month/year filter
       if (selectedMonth === 0) {
         getYearlyExpenseSummary(selectedYear);
+        getYearlySales(selectedYear);
       } else {
         getMonthlyExpense(selectedMonth, selectedYear);
         getTotalLoansExpense(selectedMonth, selectedYear);
+        getTotalSales(selectedMonth, selectedYear);
       }
     }
   }, [
@@ -84,6 +97,9 @@ const Ecommerce = () => {
     toDate,
     getDateRangeExpense,
     getDateRangeLoansExpense,
+    getTotalSales,
+    getYearlySales,
+    getDateRangeTotalSales,
   ]);
 
   // Use yearly or monthly data based on selection
@@ -95,13 +111,15 @@ const Ecommerce = () => {
     selectedMonth === 0
       ? yearlyExpenseSummary?.totalLoansExpense
       : totalLoansExpense;
+  const displaySales = selectedMonth === 0 ? yearlyTotalSales : totalSales;
 
   console.log("displayExpense", displayExpense);
   console.log("displayLoans", displayLoans);
+  console.log("displaySales", displaySales);
 
   return (
     <div className="main-content-mobile">
-      {loading && (
+      {(expenseLoading || salesLoading) && (
         <div className="flex justify-center items-center h-screen">
           <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
@@ -135,41 +153,43 @@ const Ecommerce = () => {
             </div>
           </div>
           {/* Earnings Cards */}
-          {earningData(displayExpense, displayLoans).map((item) => (
-            <div
-              key={item.title}
-              className="bg-white h-44 dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl w-full p-4 pt-4 rounded-xl flex flex-col justify-between ecommerce-card"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <p className="font-bold text-base text-gray-700 dark:text-gray-200">
-                  {item.title}
-                </p>
-                <button
-                  type="button"
-                  style={{
-                    color: item.iconColor,
-                    backgroundColor: item.iconBg,
-                  }}
-                  className="text-2xl rounded-full p-3 hover:drop-shadow-xl"
-                >
-                  {item.icon}
-                </button>
+          {earningData(displayExpense, displayLoans, displaySales).map(
+            (item) => (
+              <div
+                key={item.title}
+                className="bg-white h-44 dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl w-full p-4 pt-4 rounded-xl flex flex-col justify-between ecommerce-card"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <p className="font-bold text-base text-gray-700 dark:text-gray-200">
+                    {item.title}
+                  </p>
+                  <button
+                    type="button"
+                    style={{
+                      color: item.iconColor,
+                      backgroundColor: item.iconBg,
+                    }}
+                    className="text-2xl rounded-full p-3 hover:drop-shadow-xl"
+                  >
+                    {item.icon}
+                  </button>
+                </div>
+                <div className="flex flex-col items-center justify-center flex-1">
+                  <span className="text-xl md:text-3xl font-bold mb-1">
+                    {item.amount}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: item.pcColor }}
+                  >
+                    {item.percentage}
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-col items-center justify-center flex-1">
-                <span className="text-xl md:text-3xl font-bold mb-1">
-                  {item.amount}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span
-                  className="text-sm font-semibold"
-                  style={{ color: item.pcColor }}
-                >
-                  {item.percentage}
-                </span>
-              </div>
-            </div>
-          ))}
+            )
+          )}
         </div>
       </div>
 

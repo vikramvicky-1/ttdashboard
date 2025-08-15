@@ -113,32 +113,33 @@ export const links = [
     links: [
       {
         name: "Dashboard",
+        linkTo: "dashboard",
         icon: <FiShoppingBag />,
       },
       {
         name: "Expenses",
+        linkTo: "expenses",
         icon: <FiPieChart />,
       },
       {
-        name: "Loans & Intrests",
-        icon: <FiPieChart />,
-      },
-      {
-        name: "Pending Pay",
+        name: "Sales",
+        linkTo: "sales-data",
         icon: <FiPieChart />,
       },
     ],
   },
 ];
 
-export const earningData = (monthlyExpense, totalLoansExpense) => [
+export const earningData = (monthlyExpense, totalLoansExpense, totalSales) => [
   {
     icon: <FcSalesPerformance />,
-    amount: "₹ 39,354",
+    amount: totalSales
+      ? `₹ ${Number(totalSales).toLocaleString("en-IN")}`
+      : "₹ 0",
     title: "Total Sale",
     iconColor: "#03C9D7",
     iconBg: "#E5FAFB",
-    pcColor: "red-600",
+    pcColor: "green-600",
   },
   {
     icon: <BsBoxSeam />,
@@ -158,7 +159,6 @@ export const earningData = (monthlyExpense, totalLoansExpense) => [
     title: "Total Loans & Intrest",
     iconColor: "rgb(228, 106, 118)",
     iconBg: "rgb(255, 244, 229)",
-
     pcColor: "green-600",
   },
 ];

@@ -2,7 +2,14 @@ import React, { useEffect } from "react";
 import { Navbar, Sidebar } from "./components";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useStateContext } from "./contexts/ContextProvider";
-import { Ecommerce, Pie, AddExpense, Login, DailySale } from "./pages";
+import {
+  Ecommerce,
+  Pie,
+  AddExpense,
+  Login,
+  DailySale,
+  SalesData,
+} from "./pages";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -104,6 +111,25 @@ export const App = () => {
                   <Navbar />
                   <div className="pt-0">
                     <DailySale />
+                  </div>
+                </div>
+              </div>
+            }
+          />
+
+          <Route
+            path="/sales-data"
+            element={
+              <div className="flex relative dark:bg-main-dark-bg">
+                <Sidebar />
+                <div
+                  className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
+                    activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
+                  }`}
+                >
+                  <Navbar />
+                  <div className="pt-0">
+                    <SalesData />
                   </div>
                 </div>
               </div>

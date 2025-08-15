@@ -4,6 +4,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { MdOutlineCancel } from "react-icons/md";
 import { SiShopware } from "react-icons/si";
 import { AiOutlineMenu, AiOutlinePlusCircle } from "react-icons/ai";
+import { FiDatabase } from "react-icons/fi";
 import { TooltipComponent } from "@syncfusion/ej2-react-popups";
 import { links } from "../data/dummy";
 // Removed: import gsap from "gsap";
@@ -81,7 +82,7 @@ const Sidebar = () => {
                 </p>
                 {item.links.map((link) => (
                   <NavLink
-                    to={`/${link.name}`}
+                    to={`/${link.linkTo}`}
                     key={link.name}
                     onClick={handleCloseSidebar}
                     style={({ isActive }) => ({
@@ -101,20 +102,20 @@ const Sidebar = () => {
           {/* Action buttons at the bottom */}
           <div className="mb-4 flex flex-col gap-2 px-4">
             <Link
-              to="/daily-sale"
-              className="flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-white shadow-lg"
-              style={{ background: currentColor }}
-            >
-              <AiOutlinePlusCircle className="text-xl" />
-              <span>Daily Sale</span>
-            </Link>
-            <Link
               to="/add-expense"
               className="flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-white shadow-lg"
               style={{ background: currentColor }}
             >
               <AiOutlinePlusCircle className="text-xl" />
               <span>Add Expense</span>
+            </Link>
+            <Link
+              to="/daily-sale"
+              className="flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-white shadow-lg"
+              style={{ background: currentColor }}
+            >
+              <AiOutlinePlusCircle className="text-xl" />
+              <span>Add Sale</span>
             </Link>
           </div>
         </>
