@@ -17,120 +17,141 @@ const getInitialYear = () => {
 const useSalesStore = create((set, get) => ({
   loading: false,
   error: null,
+  // Filter state management
+  selectedMonth: getInitialMonth(),
+  selectedYear: getInitialYear(),
+  fromDate: localStorage.getItem("fromDate") || "",
+  toDate: localStorage.getItem("toDate") || "",
+  isDateRangeActive: localStorage.getItem("isDateRangeActive") === "true",
   monthlySales: { totalOnlineCash: 0, totalPhysicalCash: 0, totalSales: 0 },
   monthlyOrders: { totalAmount: 0, totalOrders: 0 },
   salesPieChartData: [],
   yearlyOrdersSummary: null,
   monthlySalesData: { sales: [] },
   monthlyOrderData: { orders: [] },
+  combinedSalesTotal: 0,
+  combinedOrdersTotal: 0,
   totalSales: 0,
   yearlyTotalSales: 0,
-  selectedMonth: getInitialMonth(),
-  selectedYear: getInitialYear(),
-  // Date range filter state
-  fromDate: localStorage.getItem("fromDate") || "",
-  toDate: localStorage.getItem("toDate") || "",
-  isDateRangeActive: localStorage.getItem("isDateRangeActive") === "true",
   // Add sales and orders arrays for SalesData component
   sales: [],
   orders: [],
 
+  // Filter state setters
+  setSelectedMonth: (month) => {
+    const m = Number(month);
+    localStorage.setItem("selectedMonth", m);
+    const currentYear = Number(localStorage.getItem("selectedYear")) || new Date().getFullYear();
+    set({ selectedMonth: m });
+    // Clear date range when switching to month/year mode
+    if (localStorage.getItem("isDateRangeActive") === "true") {
+      localStorage.removeItem("fromDate");
+      localStorage.removeItem("toDate");
+      localStorage.removeItem("isDateRangeActive");
+      set({ fromDate: "", toDate: "", isDateRangeActive: false });
+    }
+    // Data will be fetched by useEffect in components
+  },
+  setSelectedYear: (year) => {
+    const y = Number(year);
+    localStorage.setItem("selectedYear", y);
+    const currentMonth = Number(localStorage.getItem("selectedMonth")) || new Date().getMonth() + 1;
+    set({ selectedYear: y });
+    // Clear date range when switching to month/year mode
+    if (localStorage.getItem("isDateRangeActive") === "true") {
+      localStorage.removeItem("fromDate");
+      localStorage.removeItem("toDate");
+      localStorage.removeItem("isDateRangeActive");
+      set({ fromDate: "", toDate: "", isDateRangeActive: false });
+    }
+    // Data will be fetched by useEffect in components
+  },
   setFromDate: (date) => {
     localStorage.setItem("fromDate", date);
     set({ fromDate: date });
-    // Clear month/year data when date range is active
-    if (date && localStorage.getItem("toDate")) {
+    const toDate = localStorage.getItem("toDate");
+    if (date && toDate) {
       localStorage.setItem("isDateRangeActive", "true");
       set({ isDateRangeActive: true });
+      // Data will be fetched by useEffect in components
     }
   },
-
   setToDate: (date) => {
     localStorage.setItem("toDate", date);
     set({ toDate: date });
-    // Clear month/year data when date range is active
-    if (date && localStorage.getItem("fromDate")) {
+    const fromDate = localStorage.getItem("fromDate");
+    if (date && fromDate) {
       localStorage.setItem("isDateRangeActive", "true");
       set({ isDateRangeActive: true });
+      // Data will be fetched by useEffect in components
     }
   },
-
   setIsDateRangeActive: (active) => {
     localStorage.setItem("isDateRangeActive", active);
     set({ isDateRangeActive: active });
-    // Clear data when switching modes
-    if (active) {
-      set({
-        monthlySales: {
-          totalOnlineCash: 0,
-          totalPhysicalCash: 0,
-          totalSales: 0,
-        },
-        monthlyOrders: { totalAmount: 0, totalOrders: 0 },
-        salesPieChartData: [],
-        yearlyOrdersSummary: null,
-        monthlySalesData: { sales: [] },
-        monthlyOrderData: { orders: [] },
-        totalSales: 0,
-        yearlyTotalSales: 0,
-      });
-    }
   },
-
   resetDateRange: () => {
     localStorage.removeItem("fromDate");
     localStorage.removeItem("toDate");
     localStorage.removeItem("isDateRangeActive");
     set({ fromDate: "", toDate: "", isDateRangeActive: false });
-    // Clear date range data
-    set({
-      monthlySales: { totalOnlineCash: 0, totalPhysicalCash: 0, totalSales: 0 },
-      monthlyOrders: { totalAmount: 0, totalOrders: 0 },
-      salesPieChartData: [],
-      yearlyOrdersSummary: null,
-      monthlySalesData: { sales: [] },
-      monthlyOrderData: { orders: [] },
-      totalSales: 0,
-      yearlyTotalSales: 0,
-    });
   },
 
-  setSelectedMonth: (month) => {
-    localStorage.setItem("selectedMonth", month);
-    set({ selectedMonth: month });
-    // Clear date range data when switching to month/year mode
-    if (localStorage.getItem("isDateRangeActive") === "true") {
-      localStorage.removeItem("fromDate");
-      localStorage.removeItem("toDate");
-      localStorage.removeItem("isDateRangeActive");
-      set({ fromDate: "", toDate: "", isDateRangeActive: false });
-    }
-    // If switching to 'All', clear monthly data
-    if (Number(month) === 0) {
-      set({
-        monthlySales: {
-          totalOnlineCash: 0,
-          totalPhysicalCash: 0,
-          totalSales: 0,
-        },
-        monthlyOrders: { totalAmount: 0, totalOrders: 0 },
-        salesPieChartData: [],
-        yearlyTotalSales: 0,
-      });
-    } else {
-      set({ yearlyOrdersSummary: null, totalSales: 0 });
-    }
-  },
-
-  setSelectedYear: (year) => {
-    localStorage.setItem("selectedYear", year);
-    set({ selectedYear: year });
-    // Clear date range data when switching to month/year mode
-    if (localStorage.getItem("isDateRangeActive") === "true") {
-      localStorage.removeItem("fromDate");
-      localStorage.removeItem("toDate");
-      localStorage.removeItem("isDateRangeActive");
-      set({ fromDate: "", toDate: "", isDateRangeActive: false });
+  // Calculate combined totals for dashboard
+  getCombinedTotals: async () => {
+    const { selectedMonth, selectedYear, isDateRangeActive, fromDate, toDate } = get();
+    
+    try {
+      let salesTotal = 0;
+      let ordersTotal = 0;
+      
+      // Fetch sales total from backend
+      if (isDateRangeActive && fromDate && toDate) {
+        const salesResponse = await axiosInstance.get(`/sales/date-range-sales-total`, {
+          params: { fromDate, toDate }
+        });
+        salesTotal = salesResponse.data.totalSalesAmount || 0;
+        
+        const ordersResponse = await axiosInstance.get(`/order/date-range-orders-total`, {
+          params: { fromDate, toDate }
+        });
+        ordersTotal = ordersResponse.data.totalOrdersAmount || 0;
+      } else if (selectedMonth === 0) {
+        // Yearly totals
+        const salesResponse = await axiosInstance.get(`/sales/yearly-sales-total`, {
+          params: { year: selectedYear }
+        });
+        salesTotal = salesResponse.data.totalSalesAmount || 0;
+        
+        const ordersResponse = await axiosInstance.get(`/order/yearly-orders-total`, {
+          params: { year: selectedYear }
+        });
+        ordersTotal = ordersResponse.data.totalOrdersAmount || 0;
+      } else {
+        // Monthly totals
+        const salesResponse = await axiosInstance.get(`/sales/monthly-sales-total`, {
+          params: { month: selectedMonth, year: selectedYear }
+        });
+        salesTotal = salesResponse.data.totalSalesAmount || 0;
+        
+        const ordersResponse = await axiosInstance.get(`/order/monthly-orders-total`, {
+          params: { month: selectedMonth, year: selectedYear }
+        });
+        ordersTotal = ordersResponse.data.totalOrdersAmount || 0;
+      }
+      
+      return {
+        totalSales: salesTotal,
+        totalOrders: ordersTotal,
+        combinedTotal: salesTotal + ordersTotal
+      };
+    } catch (error) {
+      console.error('Error fetching combined totals:', error);
+      return {
+        totalSales: 0,
+        totalOrders: 0,
+        combinedTotal: 0
+      };
     }
   },
 
@@ -575,11 +596,16 @@ const useSalesStore = create((set, get) => ({
     if (Number(month) === 0) return; // Don't fetch if 'All' selected
     set({ loading: true });
     try {
-      const response = await axiosInstance.get(`/sales/monthly-sales`, {
-        params: { month, year },
-      });
+      // Fetch monthly sales and orders, then combine
+      const [salesRes, ordersRes] = await Promise.all([
+        axiosInstance.get(`/sales/monthly-sales`, { params: { month, year } }),
+        axiosInstance.get(`/order/monthly-orders`, { params: { month, year } }),
+      ]);
+      const monthlySalesTotal = salesRes.data?.monthlySales?.totalSales || 0;
+      const monthlyOrdersAmount =
+        ordersRes.data?.monthlyOrders?.totalAmount || 0;
       set({
-        totalSales: response.data.monthlySales?.totalSales || 0,
+        totalSales: Number(monthlySalesTotal) + Number(monthlyOrdersAmount),
         loading: false,
       });
     } catch (error) {
@@ -592,11 +618,16 @@ const useSalesStore = create((set, get) => ({
   getYearlySales: async (year) => {
     set({ loading: true });
     try {
-      const response = await axiosInstance.get(`/sales/yearly-sales`, {
-        params: { year },
-      });
+      // Fetch yearly sales and yearly orders, then combine
+      const [salesRes, ordersRes] = await Promise.all([
+        axiosInstance.get(`/sales/yearly-sales`, { params: { year } }),
+        axiosInstance.get(`/order/yearly-orders`, { params: { year } }),
+      ]);
+      const yearlySalesTotal = salesRes.data?.totalYearlySales || 0;
+      const yearlyOrdersTotal =
+        ordersRes.data?.totalYearlyOrdersAmount || 0;
       set({
-        yearlyTotalSales: response.data.totalYearlySales || 0,
+        yearlyTotalSales: Number(yearlySalesTotal) + Number(yearlyOrdersTotal),
         loading: false,
       });
     } catch (error) {
@@ -609,11 +640,20 @@ const useSalesStore = create((set, get) => ({
   getDateRangeTotalSales: async (fromDate, toDate) => {
     set({ loading: true });
     try {
-      const response = await axiosInstance.get(`/sales/date-range-sales`, {
-        params: { fromDate, toDate },
-      });
+      // Fetch date-range sales and orders, then combine
+      const [salesRes, ordersRes] = await Promise.all([
+        axiosInstance.get(`/sales/date-range-sales`, {
+          params: { fromDate, toDate },
+        }),
+        axiosInstance.get(`/order/date-range-orders`, {
+          params: { fromDate, toDate },
+        }),
+      ]);
+      const rangeSalesTotal = salesRes.data?.totalSales || 0;
+      const rangeOrdersAmount =
+        ordersRes.data?.totalOrders?.totalAmount || 0;
       set({
-        totalSales: response.data.totalSales || 0,
+        totalSales: Number(rangeSalesTotal) + Number(rangeOrdersAmount),
         loading: false,
       });
     } catch (error) {

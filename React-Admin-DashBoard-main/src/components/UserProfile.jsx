@@ -1,14 +1,17 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useStateContext } from "../contexts/ContextProvider";
 import { Button } from ".";
 import { MdOutlineCancel } from "react-icons/md";
 import { FiSettings } from "react-icons/fi";
+import { BiCategory } from "react-icons/bi";
 import avatar from "../data/avatar.jpg";
 import Settings from "./Settings";
 
 const UserProfile = () => {
   const { currentColor, setIsClicked, isClicked } = useStateContext();
   const [showSettings, setShowSettings] = useState(false);
+  const navigate = useNavigate();
 
   console.log("UserProfile render - showSettings:", showSettings);
 
@@ -83,6 +86,35 @@ const UserProfile = () => {
                 </p>
                 <p className="text-gray-500 text-xs sm:text-sm dark:text-gray-400">
                   Theme & Preferences
+                </p>
+              </div>
+            </button>
+          </div>
+
+          {/* Manage Categories Button */}
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsClicked({ ...isClicked, userProfile: false });
+                navigate('/manage-categories');
+              }}
+              className="flex gap-3 sm:gap-5 items-center w-full p-3 sm:p-4 hover:bg-light-gray cursor-pointer dark:hover:bg-[#42464D] rounded-lg transition-colors duration-200 z-10 relative bg-transparent border-none outline-none"
+            >
+              <div
+                style={{ color: "#FF5722", backgroundColor: "#FFF3E0" }}
+                className="text-lg sm:text-xl rounded-lg p-2 sm:p-3 hover:bg-ligth-gray flex-shrink-0"
+              >
+                <BiCategory />
+              </div>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="font-semibold dark:text-gray-200 text-sm sm:text-base">
+                  Manage Categories
+                </p>
+                <p className="text-gray-500 text-xs sm:text-sm dark:text-gray-400">
+                  Add & Edit Expense Categories
                 </p>
               </div>
             </button>

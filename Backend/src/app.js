@@ -2,6 +2,7 @@ import express from "express";
 import expenseRoutes from "./Routes/expenseRoutes.js";
 import salesRoutes from "./Routes/salesRoutes.js";
 import orderRoutes from "./Routes/orderRoutes.js";
+import categoryRoutes from "./Routes/categoryRoutes.js";
 import cors from "cors";
 import path from "path";
 
@@ -32,6 +33,7 @@ app.use("/uploads", express.static(path.resolve("./Backend/uploads")));
 app.use("/api/expense", expenseRoutes);
 app.use("/api/sales", salesRoutes);
 app.use("/api/order", orderRoutes);
+app.use("/api", categoryRoutes);
 
 // 404 fallback
 app.use((req, res) => {

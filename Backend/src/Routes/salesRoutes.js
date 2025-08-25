@@ -5,8 +5,12 @@ import {
   getSalesPieChartData,
   getYearlySalesSummary,
   getMonthlySalesData,
-  deleteSales,
+  getYearlySalesData,
+  getMonthlySalesTotal,
+  getYearlySalesTotal,
+  getDateRangeSalesTotal,
   updateSales,
+  deleteSales,
   getDateRangeSales,
   getDateRangeSalesPieChartData,
   getDateRangeSalesData,
@@ -56,6 +60,7 @@ router.get("/monthly-sales", getMonthlySales);
 router.get("/sales-pie-chart-data", getSalesPieChartData);
 router.get("/yearly-sales", getYearlySalesSummary);
 router.get("/monthly-sales-data", getMonthlySalesData);
+router.get("/yearly-sales-data", getYearlySalesData);
 router.delete("/delete-sales/:id", deleteSales);
 router.put("/update-sales/:id", upload.single("file"), updateSales);
 
@@ -63,5 +68,10 @@ router.put("/update-sales/:id", upload.single("file"), updateSales);
 router.get("/date-range-sales", getDateRangeSales);
 router.get("/date-range-sales-pie-chart-data", getDateRangeSalesPieChartData);
 router.get("/date-range-sales-data", getDateRangeSalesData);
+
+// Total sales amount routes
+router.get("/monthly-sales-total", getMonthlySalesTotal);
+router.get("/yearly-sales-total", getYearlySalesTotal);
+router.get("/date-range-sales-total", getDateRangeSalesTotal);
 
 export default router;

@@ -1,4 +1,5 @@
 import Expense from "../Models/expenseModel.js";
+import Category from "../Models/categoryModel.js";
 import fs from "fs";
 import path from "path";
 
@@ -12,66 +13,14 @@ export const createExpense = async (req, res) => {
 
     // Validate subcategory if provided
     if (req.body.subCategory && req.body.category) {
-      const categorySubMap = {
-        "Thatha Materials": ["Tea & Coffee", "Cakes & Bakes", "Ice cream"],
-        "Masala Materials": [
-          "Cardamom",
-          "Pepper",
-          "Clove",
-          "Masala 1",
-          "Masala 2",
-        ],
-        "Add ON Materials": [
-          "Honey",
-          "Jaggery Powder",
-          "Chocolate Syrup",
-          "Choco Chips",
-          "Sprinkels",
-          "Sauce",
-        ],
-        "Fresh Materials": ["Ginger", "Lemon", "Mint"],
-        Milk: ["Arokya", "Nandini"],
-        Transport: [
-          "Hot Snacks",
-          "Nandini",
-          "Arokya",
-          "Thatha Materials",
-          "Others - Remark",
-        ],
-        Police: ["Car", "Bike", "Station"],
-        "Staff Expenses": [
-          "Room Rent",
-          "Room E - Bill",
-          "Room Water Tank",
-          "Staff Food - Remark",
-          "Others - Remark",
-        ],
-        "Shop Expenses": [
-          "Shop Rent",
-          "Shop E - Bill",
-          "Shop Maintainace - Remark",
-          "Wifi",
-        ],
-        "Legal Doc": [
-          "Rental Agreement",
-          "Trade License",
-          "FSSAI License",
-          "Labour License",
-        ],
-        "Loans & Interests": [
-          "GOWTHAM EMI - 4939",
-          "GOWTHAM EMI - 14711",
-          "GOWTHAM EMI - 4023",
-          "SRINIVAS EMI -14839",
-          "SRINIVAS EMI - 4000",
-          "GOWTHAM INTREST - 2400",
-          "GOWTHAM GOLD INTREST - 20400",
-          "1720",
-        ],
-      };
-
-      const validSubcategories = categorySubMap[req.body.category] || [];
-      if (!validSubcategories.includes(req.body.subCategory)) {
+      const category = await Category.findOne({ name: req.body.category });
+      if (!category) {
+        return res.status(400).json({
+          error: `${req.body.category} is not a valid category.`,
+        });
+      }
+      
+      if (!category.subCategories.includes(req.body.subCategory)) {
         return res.status(400).json({
           error: `${req.body.subCategory} is not a valid subcategory for the selected category.`,
         });
@@ -377,13 +326,27 @@ export const getMonthlyExpenseData = async (req, res) => {
   }
 };
 
-export const getExpenseCategories = (req, res) => {
-  // Get categories and subcategories from the model
-  const categories = Expense.schema.path("category").enumValues;
-  // Use a dummy instance to get the virtual
-  const dummy = new Expense({});
-  const categorySubMap = dummy.categorySubMap;
-  res.status(200).json({ categories, categorySubMap });
+export const getExpenseCategories = async (req, res) => {
+  try {
+    const categories = await Category.find({});
+    
+    // Transform to the expected format
+    const categorySubMap = {};
+    const categoryNames = [];
+    
+    categories.forEach(category => {
+      categoryNames.push(category.name);
+      categorySubMap[category.name] = category.subCategories || [];
+    });
+
+    res.status(200).json({ 
+      categories: categoryNames, 
+      categorySubMap 
+    });
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    res.status(500).json({ error: "Failed to fetch categories" });
+  }
 };
 
 export const updateExpense = async (req, res) => {
@@ -416,66 +379,14 @@ export const updateExpense = async (req, res) => {
 
     // Validate subcategory if provided
     if (updateData.subCategory && updateData.category) {
-      const categorySubMap = {
-        "Thatha Materials": ["Tea & Coffee", "Cakes & Bakes", "Ice cream"],
-        "Masala Materials": [
-          "Cardamom",
-          "Pepper",
-          "Clove",
-          "Masala 1",
-          "Masala 2",
-        ],
-        "Add ON Materials": [
-          "Honey",
-          "Jaggery Powder",
-          "Chocolate Syrup",
-          "Choco Chips",
-          "Sprinkels",
-          "Sauce",
-        ],
-        "Fresh Materials": ["Ginger", "Lemon", "Mint"],
-        Milk: ["Arokya", "Nandini"],
-        Transport: [
-          "Hot Snacks",
-          "Nandini",
-          "Arokya",
-          "Thatha Materials",
-          "Others - Remark",
-        ],
-        Police: ["Car", "Bike", "Station"],
-        "Staff Expenses": [
-          "Room Rent",
-          "Room E - Bill",
-          "Room Water Tank",
-          "Staff Food - Remark",
-          "Others - Remark",
-        ],
-        "Shop Expenses": [
-          "Shop Rent",
-          "Shop E - Bill",
-          "Shop Maintainace - Remark",
-          "Wifi",
-        ],
-        "Legal Doc": [
-          "Rental Agreement",
-          "Trade License",
-          "FSSAI License",
-          "Labour License",
-        ],
-        "Loans & Interests": [
-          "GOWTHAM EMI - 4939",
-          "GOWTHAM EMI - 14711",
-          "GOWTHAM EMI - 4023",
-          "SRINIVAS EMI -14839",
-          "SRINIVAS EMI - 4000",
-          "GOWTHAM INTREST - 2400",
-          "GOWTHAM GOLD INTREST - 20400",
-          "1720",
-        ],
-      };
-
-      const validSubcategories = categorySubMap[updateData.category] || [];
-      if (!validSubcategories.includes(updateData.subCategory)) {
+      const category = await Category.findOne({ name: updateData.category });
+      if (!category) {
+        return res.status(400).json({
+          error: `${updateData.category} is not a valid category.`,
+        });
+      }
+      
+      if (!category.subCategories.includes(updateData.subCategory)) {
         return res.status(400).json({
           error: `${updateData.subCategory} is not a valid subcategory for the selected category.`,
         });

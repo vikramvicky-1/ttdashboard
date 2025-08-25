@@ -13,7 +13,7 @@ const getInitialYear = () => {
   return new Date().getFullYear();
 };
 
-const useExpenseStore = create((set) => ({
+const useExpenseStore = create((set, get) => ({
   loading: false,
   error: null,
   monthlyExpense: 0,
@@ -32,19 +32,37 @@ const useExpenseStore = create((set) => ({
   setFromDate: (date) => {
     localStorage.setItem("fromDate", date);
     set({ fromDate: date });
+    const toDate = localStorage.getItem("toDate");
     // Clear month/year data when date range is active
-    if (date && localStorage.getItem("toDate")) {
+    if (date && toDate) {
       localStorage.setItem("isDateRangeActive", "true");
       set({ isDateRangeActive: true });
+      // Immediately fetch date range data
+      setTimeout(() => {
+        const { getDateRangePieChartData, getDateRangeExpenseData, getDateRangeExpense, getDateRangeLoansExpense } = get();
+        getDateRangePieChartData(date, toDate);
+        getDateRangeExpenseData(date, toDate);
+        getDateRangeExpense(date, toDate);
+        getDateRangeLoansExpense(date, toDate);
+      }, 0);
     }
   },
   setToDate: (date) => {
     localStorage.setItem("toDate", date);
     set({ toDate: date });
+    const fromDate = localStorage.getItem("fromDate");
     // Clear month/year data when date range is active
-    if (date && localStorage.getItem("fromDate")) {
+    if (date && fromDate) {
       localStorage.setItem("isDateRangeActive", "true");
       set({ isDateRangeActive: true });
+      // Immediately fetch date range data
+      setTimeout(() => {
+        const { getDateRangePieChartData, getDateRangeExpenseData, getDateRangeExpense, getDateRangeLoansExpense } = get();
+        getDateRangePieChartData(fromDate, date);
+        getDateRangeExpenseData(fromDate, date);
+        getDateRangeExpense(fromDate, date);
+        getDateRangeLoansExpense(fromDate, date);
+      }, 0);
     }
   },
   setIsDateRangeActive: (active) => {
@@ -77,8 +95,10 @@ const useExpenseStore = create((set) => ({
     // The useEffect in components will handle the data refresh with month/year
   },
   setSelectedMonth: (month) => {
-    localStorage.setItem("selectedMonth", month);
-    set({ selectedMonth: month });
+    const m = Number(month);
+    localStorage.setItem("selectedMonth", m);
+    const currentYear = Number(localStorage.getItem("selectedYear")) || new Date().getFullYear();
+    set({ selectedMonth: m });
     // Clear date range data when switching to month/year mode
     if (localStorage.getItem("isDateRangeActive") === "true") {
       localStorage.removeItem("fromDate");
@@ -86,20 +106,35 @@ const useExpenseStore = create((set) => ({
       localStorage.removeItem("isDateRangeActive");
       set({ fromDate: "", toDate: "", isDateRangeActive: false });
     }
-    // If switching to 'All', clear monthly data
+    // Clear data when switching modes and immediately fetch new data
     if (Number(month) === 0) {
       set({
         monthlyExpense: 0,
         totalLoansExpense: null,
         expensePieChartData: [],
       });
+      // Fetch yearly data immediately
+      setTimeout(() => {
+        const { getYearlyExpenseSummary } = get();
+        getYearlyExpenseSummary(currentYear);
+      }, 0);
     } else {
       set({ yearlyExpenseSummary: null });
+      // Fetch monthly data immediately
+      setTimeout(() => {
+        const { getExpensePieChartData, getMonthlyExpenseData, getMonthlyExpense, getTotalLoansExpense } = get();
+        getExpensePieChartData(m, currentYear);
+        getMonthlyExpenseData(m, currentYear);
+        getMonthlyExpense(m, currentYear);
+        getTotalLoansExpense(m, currentYear);
+      }, 0);
     }
   },
   setSelectedYear: (year) => {
-    localStorage.setItem("selectedYear", year);
-    set({ selectedYear: year });
+    const y = Number(year);
+    localStorage.setItem("selectedYear", y);
+    const currentMonth = Number(localStorage.getItem("selectedMonth")) || new Date().getMonth() + 1;
+    set({ selectedYear: y });
     // Clear date range data when switching to month/year mode
     if (localStorage.getItem("isDateRangeActive") === "true") {
       localStorage.removeItem("fromDate");
@@ -107,6 +142,18 @@ const useExpenseStore = create((set) => ({
       localStorage.removeItem("isDateRangeActive");
       set({ fromDate: "", toDate: "", isDateRangeActive: false });
     }
+    // Immediately fetch data for new year
+    setTimeout(() => {
+      const { getExpensePieChartData, getMonthlyExpenseData, getYearlyExpenseSummary, getMonthlyExpense, getTotalLoansExpense } = get();
+      if (currentMonth === 0) {
+        getYearlyExpenseSummary(y);
+      } else {
+        getExpensePieChartData(currentMonth, y);
+        getMonthlyExpenseData(currentMonth, y);
+        getMonthlyExpense(currentMonth, y);
+        getTotalLoansExpense(currentMonth, y);
+      }
+    }, 0);
   },
   getMonthlyExpense: async (month, year) => {
     if (Number(month) === 0) return; // Don't fetch if 'All' selected

@@ -232,6 +232,83 @@ export const getMonthlySalesData = async (req, res) => {
   }
 };
 
+// Yearly sales list for "All months" view
+export const getYearlySalesData = async (req, res) => {
+  try {
+    const { year } = req.query;
+    if (!year) {
+      return res.status(400).json({
+        error: "Year is required (e.g. ?year=2025)",
+      });
+    }
+    const yearInt = parseInt(year);
+    if (isNaN(yearInt)) {
+      return res.status(400).json({ error: "Invalid year" });
+    }
+
+    const startDate = new Date(yearInt, 0, 1);
+    const endDate = new Date(yearInt + 1, 0, 1);
+
+    const sales = await Sales.find({
+      date: { $gte: startDate, $lt: endDate },
+    }).sort({ date: -1 });
+
+    return res.status(200).json({ sales });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get total sales amount for monthly period
+export const getMonthlySalesTotal = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    if (!month || !year) {
+      return res.status(400).json({
+        error: "Month and year are required (e.g. ?month=7&year=2025)",
+      });
+    }
+    const monthInt = parseInt(month);
+    const yearInt = parseInt(year);
+    if (isNaN(monthInt) || isNaN(yearInt) || monthInt < 1 || monthInt > 12) {
+      return res.status(400).json({ error: "Invalid month or year" });
+    }
+
+    const startDate = new Date(yearInt, monthInt - 1, 1);
+    const endDate = new Date(yearInt, monthInt, 1);
+
+    const totalResult = await Sales.aggregate([
+      {
+        $match: {
+          date: { $gte: startDate, $lt: endDate },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalOnlineCash: { $sum: "$onlineCash" },
+          totalPhysicalCash: { $sum: "$physicalCash" },
+          totalSalesAmount: { $sum: { $add: ["$onlineCash", "$physicalCash"] } },
+        },
+      },
+    ]);
+
+    const result = totalResult[0] || { 
+      totalOnlineCash: 0, 
+      totalPhysicalCash: 0, 
+      totalSalesAmount: 0 
+    };
+    
+    return res.status(200).json({
+      totalSalesAmount: result.totalSalesAmount,
+      totalOnlineCash: result.totalOnlineCash,
+      totalPhysicalCash: result.totalPhysicalCash,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 export const updateSales = async (req, res) => {
   try {
     const { id } = req.params;
@@ -475,6 +552,105 @@ export const getDateRangeSalesData = async (req, res) => {
 
     res.status(200).json({
       sales,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get total sales amount for yearly period
+export const getYearlySalesTotal = async (req, res) => {
+  try {
+    const { year } = req.query;
+    if (!year) {
+      return res.status(400).json({
+        error: "Year is required (e.g. ?year=2025)",
+      });
+    }
+    const yearInt = parseInt(year);
+    if (isNaN(yearInt)) {
+      return res.status(400).json({ error: "Invalid year" });
+    }
+
+    const startDate = new Date(yearInt, 0, 1);
+    const endDate = new Date(yearInt + 1, 0, 1);
+
+    const totalResult = await Sales.aggregate([
+      {
+        $match: {
+          date: { $gte: startDate, $lt: endDate },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalOnlineCash: { $sum: "$onlineCash" },
+          totalPhysicalCash: { $sum: "$physicalCash" },
+          totalSalesAmount: { $sum: { $add: ["$onlineCash", "$physicalCash"] } },
+        },
+      },
+    ]);
+
+    const result = totalResult[0] || { 
+      totalOnlineCash: 0, 
+      totalPhysicalCash: 0, 
+      totalSalesAmount: 0 
+    };
+    
+    return res.status(200).json({
+      totalSalesAmount: result.totalSalesAmount,
+      totalOnlineCash: result.totalOnlineCash,
+      totalPhysicalCash: result.totalPhysicalCash,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get total sales amount for date range
+export const getDateRangeSalesTotal = async (req, res) => {
+  try {
+    const { fromDate, toDate } = req.query;
+    if (!fromDate || !toDate) {
+      return res.status(400).json({
+        error: "fromDate and toDate are required (e.g. ?fromDate=2025-07-01&toDate=2025-07-31)",
+      });
+    }
+
+    const startDate = new Date(fromDate);
+    const endDate = new Date(toDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: "Invalid date format" });
+    }
+
+    const totalResult = await Sales.aggregate([
+      {
+        $match: {
+          date: { $gte: startDate, $lte: endDate },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalOnlineCash: { $sum: "$onlineCash" },
+          totalPhysicalCash: { $sum: "$physicalCash" },
+          totalSalesAmount: { $sum: { $add: ["$onlineCash", "$physicalCash"] } },
+        },
+      },
+    ]);
+
+    const result = totalResult[0] || { 
+      totalOnlineCash: 0, 
+      totalPhysicalCash: 0, 
+      totalSalesAmount: 0 
+    };
+    
+    return res.status(200).json({
+      totalSalesAmount: result.totalSalesAmount,
+      totalOnlineCash: result.totalOnlineCash,
+      totalPhysicalCash: result.totalPhysicalCash,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

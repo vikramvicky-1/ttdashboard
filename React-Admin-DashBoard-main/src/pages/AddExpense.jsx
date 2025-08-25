@@ -1,6 +1,8 @@
 import React, { useState, useRef } from "react";
 import { useStateContext } from "../contexts/ContextProvider";
+import { FiEye } from "react-icons/fi";
 import useExpenseStore from "../Store/ExpenseStore";
+import { AttachmentModal } from "../components";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -23,6 +25,11 @@ const AddExpense = () => {
   const [showPaymentMode, setShowPaymentMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [attachmentModal, setAttachmentModal] = useState({
+    isOpen: false,
+    fileUrl: "",
+    fileName: ""
+  });
   const fileInputRef = useRef(null);
 
   // Fetch categories on mount
@@ -150,45 +157,53 @@ const AddExpense = () => {
                     ))}
                 </select>
               </div>
-              <div className="mb-4">
-                <label
-                  htmlFor="expenseSubCategory"
-                  className="block mb-1 font-medium"
-                >
-                  Sub-Category
-                  {form.category &&
-                    categorySubMap[form.category] &&
-                    categorySubMap[form.category].length > 0 && (
-                      <span className="text-red-500">*</span>
-                    )}
-                </label>
-                <select
-                  id="expenseSubCategory"
-                  name="subCategory"
-                  value={form.subCategory}
-                  onChange={handleChange}
-                  className={`w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                    currentMode === "Dark"
-                      ? "bg-[#23272e] text-gray-100"
-                      : "bg-white text-gray-900"
-                  }`}
-                  disabled={!form.category || !categorySubMap[form.category]}
-                  required={
-                    form.category &&
-                    categorySubMap[form.category] &&
-                    categorySubMap[form.category].length > 0
-                  }
-                >
-                  <option value="">Select Sub-Category</option>
-                  {form.category &&
-                    categorySubMap[form.category] &&
-                    categorySubMap[form.category].map((sub) => (
+              {/* Only show subcategory field if category has subcategories */}
+              {form.category &&
+                categorySubMap[form.category] &&
+                categorySubMap[form.category].length > 0 && (
+                <div className="mb-4">
+                  <label
+                    htmlFor="expenseSubCategory"
+                    className="block mb-1 font-medium"
+                  >
+                    Sub-Category <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="expenseSubCategory"
+                    name="subCategory"
+                    value={form.subCategory}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                      currentMode === "Dark"
+                        ? "bg-[#23272e] text-gray-100"
+                        : "bg-white text-gray-900"
+                    }`}
+                    required
+                  >
+                    <option value="">Select Sub-Category</option>
+                    {categorySubMap[form.category].map((sub) => (
                       <option key={sub} value={sub}>
                         {sub}
                       </option>
                     ))}
-                </select>
-              </div>
+                  </select>
+                </div>
+              )}
+              
+              {/* Show message when category has no subcategories */}
+              {form.category &&
+                categorySubMap[form.category] &&
+                categorySubMap[form.category].length === 0 && (
+                <div className="mb-4">
+                  <div className={`px-3 py-2 rounded border text-sm ${
+                    currentMode === "Dark"
+                      ? "bg-gray-700 text-gray-300 border-gray-600"
+                      : "bg-gray-100 text-gray-600 border-gray-300"
+                  }`}>
+                    No subcategories available for "{form.category}"
+                  </div>
+                </div>
+              )}
               <div className="mb-4">
                 <label
                   htmlFor="expenseAmount"
@@ -228,15 +243,34 @@ const AddExpense = () => {
                 <label htmlFor="expenseFile" className="block mb-1 font-medium">
                   File Attachment
                 </label>
-                <input
-                  type="file"
-                  id="expenseFile"
-                  name="file"
-                  accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400 bg-inherit"
-                  ref={fileInputRef}
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="file"
+                    id="expenseFile"
+                    name="file"
+                    accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    onChange={handleChange}
+                    ref={fileInputRef}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {form.file && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const fileUrl = URL.createObjectURL(form.file);
+                        setAttachmentModal({
+                          isOpen: true,
+                          fileUrl: fileUrl,
+                          fileName: form.file.name
+                        });
+                      }}
+                      className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1"
+                    >
+                      <FiEye size={16} />
+                      View
+                    </button>
+                  )}
+                </div>
                 <p className="text-xs text-gray-500 mt-1">
                   Allowed: Images, PDFs, Word files. Max size: 10MB.
                 </p>
@@ -328,6 +362,13 @@ const AddExpense = () => {
           )}
         </form>
       </div>
+
+      <AttachmentModal
+        isOpen={attachmentModal.isOpen}
+        onClose={() => setAttachmentModal({ isOpen: false, fileUrl: "", fileName: "" })}
+        fileUrl={attachmentModal.fileUrl}
+        fileName={attachmentModal.fileName}
+      />
     </div>
   );
 };

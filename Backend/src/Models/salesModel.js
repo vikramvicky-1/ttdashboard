@@ -30,6 +30,10 @@ const salesSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    totalSales: {
+      type: Number,
+      default: 0,
+    },
     remarks: String,
     fileUrl: String,
   },

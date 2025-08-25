@@ -1,57 +1,14 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useStateContext } from "../contexts/ContextProvider";
-import { FiDownload, FiFileText, FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiDownload, FiFileText, FiEdit2, FiTrash2, FiEye } from "react-icons/fi";
+import { FaSortUp, FaSortDown } from "react-icons/fa";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import useSalesStore from "../Store/SalesStore";
-
-// Confirmation Modal Component
-const ConfirmationModal = ({
-  isOpen,
-  onClose,
-  onConfirm,
-  message,
-  loading,
-}) => {
-  const { currentMode } = useStateContext();
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div
-        className={`${
-          currentMode === "Dark"
-            ? "bg-gray-800 text-white"
-            : "bg-white text-gray-800"
-        } p-6 rounded-lg shadow-lg max-w-md w-full mx-4`}
-      >
-        <h3 className="text-lg font-semibold mb-4">Confirm Action</h3>
-        <p className="mb-6">{message}</p>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
-          >
-            {loading ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            ) : null}
-            {loading ? "Deleting..." : "Delete"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+import { ConfirmationModal, AttachmentModal } from "../components";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // Edit Sales Modal Component
 const EditSalesModal = ({ sale, onClose, onSave }) => {
@@ -117,25 +74,6 @@ const EditSalesModal = ({ sale, onClose, onSave }) => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="editSaleDate"
-                  className="block mb-1 font-medium"
-                >
-                  Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  id="editSaleDate"
-                  name="date"
-                  value={form.date}
-                  onChange={handleChange}
-                  max={today}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-
               <div>
                 <label
                   htmlFor="editOpeningCash"
@@ -395,43 +333,6 @@ const EditOrderModal = ({ order, onClose, onSave }) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label
-                  htmlFor="editOrderDate"
-                  className="block mb-1 font-medium"
-                >
-                  Order Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  id="editOrderDate"
-                  name="orderDate"
-                  value={form.orderDate}
-                  onChange={handleChange}
-                  max={today}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="editDeliveryDate"
-                  className="block mb-1 font-medium"
-                >
-                  Delivery Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  id="editDeliveryDate"
-                  name="deliveryDate"
-                  value={form.deliveryDate}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-
-              <div>
                 <label htmlFor="editOrderId" className="block mb-1 font-medium">
                   Order ID <span className="text-red-500">*</span>
                 </label>
@@ -584,12 +485,22 @@ const SalesData = () => {
     getOrdersData,
     getDateRangeSalesData,
     getDateRangeOrdersData,
+    getCombinedTotals,
   } = useSalesStore();
 
   const [activeTab, setActiveTab] = useState("sales");
   const [salesFilter, setSalesFilter] = useState("");
   const [ordersFilter, setOrdersFilter] = useState("");
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
+
+  const handleSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
   const [actionModal, setActionModal] = useState({
     open: false,
     type: null,
@@ -601,35 +512,92 @@ const SalesData = () => {
     type: null,
   });
   const [deletingId, setDeletingId] = useState(null);
+  const [combinedTotals, setCombinedTotals] = useState({ totalSales: 0, totalOrders: 0, combinedTotal: 0 });
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    type: null,
+    title: "",
+    message: "",
+    onConfirm: null,
+    loading: false
+  });
+
+  // Attachment modal state
+  const [attachmentModal, setAttachmentModal] = useState({
+    isOpen: false,
+    fileUrl: "",
+    fileName: ""
+  });
 
   // Load data based on current filter mode
   useEffect(() => {
-    if (isDateRangeActive && fromDate && toDate) {
-      getDateRangeSalesData(fromDate, toDate);
-      getDateRangeOrdersData(fromDate, toDate);
-    } else {
-      if (selectedMonth === 0) {
-        // Get yearly data
-        getSales(selectedYear);
-        getOrders(selectedYear);
+    const fetchData = async () => {
+      if (isDateRangeActive && fromDate && toDate) {
+        await Promise.all([
+          getDateRangeSalesData(fromDate, toDate),
+          getDateRangeOrdersData(fromDate, toDate)
+        ]);
       } else {
-        // Get monthly data
-        getSalesData(selectedMonth, selectedYear);
-        getOrdersData(selectedMonth, selectedYear);
+        if (Number(selectedMonth) === 0) {
+          // Get yearly data
+          await Promise.all([
+            getSales(selectedYear),
+            getOrders(selectedYear)
+          ]);
+        } else {
+          // Get monthly data
+          await Promise.all([
+            getSalesData(Number(selectedMonth), Number(selectedYear)),
+            getOrdersData(Number(selectedMonth), Number(selectedYear))
+          ]);
+        }
       }
-    }
+    };
+    
+    fetchData();
   }, [selectedMonth, selectedYear, isDateRangeActive, fromDate, toDate]);
+
+  // Calculate combined totals for dashboard card from backend
+  const calculateCombinedTotals = useCallback(async () => {
+    try {
+      const totals = await getCombinedTotals();
+      setCombinedTotals(totals);
+    } catch (error) {
+      console.error('Error calculating combined totals:', error);
+      setCombinedTotals({ totalSales: 0, totalOrders: 0, combinedTotal: 0 });
+    }
+  }, [getCombinedTotals]);
+
+  // Recalculate combined totals when filters change
+  useEffect(() => {
+    calculateCombinedTotals();
+  }, [selectedMonth, selectedYear, isDateRangeActive, fromDate, toDate, calculateCombinedTotals]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-IN");
   };
 
-  const handleSort = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
-    setSortConfig({ key, direction });
+  // Calculate total sales for a specific date (sales + orders)
+  const calculateDailyTotal = (date) => {
+    const dateStr = new Date(date).toDateString();
+    
+    // Find sales for this date
+    const dailySales = sales.find(sale => 
+      new Date(sale.date).toDateString() === dateStr
+    );
+    
+    // Find orders for this date
+    const dailyOrders = orders.filter(order => 
+      new Date(order.orderDate).toDateString() === dateStr
+    );
+    
+    const salesAmount = dailySales ? 
+      (dailySales.onlineCash + dailySales.physicalCash) : 0;
+    const ordersAmount = dailyOrders.reduce((sum, order) => sum + order.amount, 0);
+    
+    return salesAmount + ordersAmount;
   };
 
   const getSortedData = (data) => {
@@ -670,45 +638,68 @@ const SalesData = () => {
   };
 
   const handleEdit = (row, type) => {
-    setEditModal({ open: true, item: row, type });
+    setConfirmModal({
+      isOpen: true,
+      type: "warning",
+      title: `Edit ${type === "sales" ? "Sale" : "Order"}`,
+      message: `Do you want to edit this ${type === "sales" ? "sale" : "order"}?`,
+      onConfirm: () => {
+        setEditModal({ open: true, item: row, type });
+        setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
+      },
+      loading: false
+    });
   };
 
   const handleDelete = (row, type) => {
-    setActionModal({ open: true, type: "delete", row, itemType: type });
+    setConfirmModal({
+      isOpen: true,
+      type: "danger",
+      title: `Delete ${type === "sales" ? "Sale" : "Order"}`,
+      message: `Are you sure you want to delete this ${type === "sales" ? "sale" : "order"}? This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          setConfirmModal(prev => ({ ...prev, loading: true }));
+          setDeletingId(row._id);
+          if (type === "sales") {
+            await deleteSale(row._id);
+            // Refresh sales data
+            if (isDateRangeActive && fromDate && toDate) {
+              await getDateRangeSalesData(fromDate, toDate);
+            } else if (Number(selectedMonth) === 0) {
+              await getSales(selectedYear);
+            } else {
+              await getSalesData(Number(selectedMonth), Number(selectedYear));
+            }
+          } else {
+            await deleteOrder(row._id);
+            // Refresh orders data
+            if (isDateRangeActive && fromDate && toDate) {
+              await getDateRangeOrdersData(fromDate, toDate);
+            } else if (Number(selectedMonth) === 0) {
+              await getOrders(selectedYear);
+            } else {
+              await getOrdersData(Number(selectedMonth), Number(selectedYear));
+            }
+          }
+          setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
+        } catch (error) {
+          console.error("Error deleting item:", error);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      loading: false
+    });
   };
 
-  const handleConfirmAction = async () => {
-    if (actionModal.type === "delete") {
-      try {
-        setDeletingId(actionModal.row._id);
-        if (actionModal.itemType === "sales") {
-          await deleteSale(actionModal.row._id);
-          // Refresh sales data
-          if (isDateRangeActive && fromDate && toDate) {
-            await getDateRangeSalesData(fromDate, toDate);
-          } else if (selectedMonth === 0) {
-            await getSales(selectedYear);
-          } else {
-            await getSalesData(selectedMonth, selectedYear);
-          }
-        } else {
-          await deleteOrder(actionModal.row._id);
-          // Refresh orders data
-          if (isDateRangeActive && fromDate && toDate) {
-            await getDateRangeOrdersData(fromDate, toDate);
-          } else if (selectedMonth === 0) {
-            await getOrders(selectedYear);
-          } else {
-            await getOrdersData(selectedMonth, selectedYear);
-          }
-        }
-      } catch (error) {
-        console.error("Error deleting item:", error);
-      } finally {
-        setDeletingId(null);
-        setActionModal({ open: false, type: null, row: null, itemType: null });
-      }
-    }
+  const handleViewAttachment = (fileUrl, fileName) => {
+    setAttachmentModal({
+      isOpen: true,
+      fileUrl: fileUrl,
+      fileName: fileName
+    });
   };
 
   const handleSaveEdit = async (id, data, type) => {
@@ -718,20 +709,20 @@ const SalesData = () => {
         // Refresh sales data
         if (isDateRangeActive && fromDate && toDate) {
           await getDateRangeSalesData(fromDate, toDate);
-        } else if (selectedMonth === 0) {
+        } else if (Number(selectedMonth) === 0) {
           await getSales(selectedYear);
         } else {
-          await getSalesData(selectedMonth, selectedYear);
+          await getSalesData(Number(selectedMonth), Number(selectedYear));
         }
       } else {
         await updateOrder(id, data);
         // Refresh orders data
         if (isDateRangeActive && fromDate && toDate) {
           await getDateRangeOrdersData(fromDate, toDate);
-        } else if (selectedMonth === 0) {
+        } else if (Number(selectedMonth) === 0) {
           await getOrders(selectedYear);
         } else {
-          await getOrdersData(selectedMonth, selectedYear);
+          await getOrdersData(Number(selectedMonth), Number(selectedYear));
         }
       }
       setEditModal({ open: false, item: null, type: null });
@@ -752,6 +743,7 @@ const SalesData = () => {
             "Physical",
             "Transferred",
             "Closing",
+            "Total Sales",
             "Remarks",
           ]
         : ["Order Date", "Delivery", "Order ID", "Amount", "Mode", "Remarks"];
@@ -766,6 +758,7 @@ const SalesData = () => {
           Physical: item.physicalCash,
           Transferred: item.cashTransferred,
           Closing: item.closingCash,
+          "Total Sales": item.onlineCash + item.physicalCash,
           Remarks: item.remarks || "",
         };
       } else {
@@ -787,71 +780,78 @@ const SalesData = () => {
       ws,
       activeTab === "sales" ? "Sales" : "Orders"
     );
-    XLSX.writeFile(
-      wb,
-      `${filename}_${selectedYear}_${selectedMonth || "All"}.xlsx`
-    );
-  };
+    const monthLabel = Number(selectedMonth) === 0 ? "All" : selectedMonth;
+    XLSX.writeFile(wb, `${filename}_${selectedYear}_${monthLabel}.xlsx`);
+};
 
   const exportToPDF = (data, filename) => {
     const doc = new jsPDF({ orientation: "landscape" });
     const title = `${activeTab === "sales" ? "Sales" : "Orders"} Report`;
     const subtitle = `Period: ${
-      selectedMonth === 0 ? "All Year" : `Month ${selectedMonth}`
+      Number(selectedMonth) === 0 ? "All Year" : `Month ${selectedMonth}`
     } ${selectedYear}`;
 
     doc.setFontSize(16);
-    doc.text(title, 14, 22);
+    doc.text(title, 20, 20);
     doc.setFontSize(12);
-    doc.text(subtitle, 14, 32);
+    doc.text(subtitle, 20, 30);
 
-    const headers =
-      activeTab === "sales"
-        ? [
-            "Date",
-            "Opening",
-            "Purchase",
-            "Online",
-            "Physical",
-            "Transferred",
-            "Closing",
-            "Remarks",
-          ]
-        : ["Order Date", "Delivery", "Order ID", "Amount", "Mode", "Remarks"];
-
-    const tableRows = data.map((item) => {
+    const tableData = data.map((item) => {
       if (activeTab === "sales") {
         return [
           formatDate(item.date),
-          item.openingCash,
-          item.purchaseCash,
-          item.onlineCash,
-          item.physicalCash,
-          item.cashTransferred,
-          item.closingCash,
-          item.remarks || "",
+          `₹${item.openingCash}`,
+          `₹${item.purchaseCash}`,
+          `₹${item.onlineCash}`,
+          `₹${item.physicalCash}`,
+          `₹${item.cashTransferred}`,
+          `₹${item.closingCash}`,
+          `₹${item.totalSales}`,
         ];
       } else {
         return [
           formatDate(item.orderDate),
           formatDate(item.deliveryDate),
           item.orderId,
-          item.amount,
+          `₹${item.amount}`,
           item.paymentMode,
+          item.attachment ? "Yes" : "No",
           item.remarks || "",
         ];
       }
     });
 
+    const headers =
+      activeTab === "sales"
+        ? [
+            "Date",
+            "Opening Cash",
+            "Purchase Cash",
+            "Online Cash",
+            "Physical Cash",
+            "Cash Transferred",
+            "Closing Cash",
+            "Total Sales",
+          ]
+        : [
+            "Order Date",
+            "Delivery Date",
+            "Order ID",
+            "Amount",
+            "Payment Mode",
+            "Attachment",
+            "Remarks",
+          ];
+
     doc.autoTable({
       head: [headers],
-      body: tableRows,
+      body: tableData,
       startY: 40,
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [41, 128, 185] },
+      headStyles: { fillColor: [66, 139, 202] },
     });
 
-    doc.save(`${filename}_${selectedYear}_${selectedMonth || "All"}.pdf`);
+    doc.save(filename);
   };
 
   const filteredSalesData = getSortedData(filterData(sales || [], salesFilter));
@@ -861,41 +861,41 @@ const SalesData = () => {
 
   return (
     <div className="main-content-mobile">
-      <div className="w-full max-w-full px-2 md:px-4">
-        <div className="bg-white dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl m-2 sm:m-3 p-3 sm:p-4 rounded-2xl max-w-full overflow-hidden">
-          <div className="m-2 p-2 pb-4 md:p-6 lg:p-8 md:m-4 lg:m-6 mt-6 sm:mt-8 md:mt-12 lg:mt-16 md:rounded-3xl dark:bg-secondary-dark-bg rounded-xl bg-gray-200 max-w-full overflow-hidden">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-                Sales Data
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                View and manage your sales and order records
-              </p>
-            </div>
+    <div className="w-full max-w-full px-2 md:px-4">
+      <div className="bg-white dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl m-2 sm:m-3 p-3 sm:p-4 rounded-2xl max-w-full overflow-hidden">
+        <div className="m-2 p-2 pb-4 md:p-6 lg:p-8 md:m-4 lg:m-6 mt-6 sm:mt-8 md:mt-12 lg:mt-16 md:rounded-3xl dark:bg-secondary-dark-bg rounded-xl bg-gray-200 max-w-full overflow-hidden">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+              Sales Data
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              View and manage your sales and order records
+            </p>
+          </div>
 
-            {/* Tabs */}
-            <div className="flex border-b border-gray-300 dark:border-gray-600 mb-6">
-              <button
-                className={`px-4 py-2 font-semibold ${
-                  activeTab === "sales"
-                    ? "border-b-2 text-blue-600 border-blue-600"
-                    : "text-gray-600 dark:text-gray-400"
-                }`}
-                onClick={() => setActiveTab("sales")}
-              >
-                Daily Sales
-              </button>
-              <button
-                className={`px-4 py-2 font-semibold ${
-                  activeTab === "orders"
-                    ? "border-b-2 text-blue-600 border-blue-600"
-                    : "text-gray-600 dark:text-gray-400"
-                }`}
-                onClick={() => setActiveTab("orders")}
-              >
-                Orders
-              </button>
-            </div>
+          {/* Tab Navigation */}
+          <div className="flex border-b border-gray-300 dark:border-gray-600 mb-6">
+            <button
+              className={`px-6 py-3 font-semibold text-lg ${
+                activeTab === "sales"
+                  ? "border-b-2 text-blue-600 border-blue-600"
+                  : "text-gray-600 dark:text-gray-400 hover:text-blue-500"
+              }`}
+              onClick={() => setActiveTab("sales")}
+            >
+              Sales Data
+            </button>
+            <button
+              className={`px-6 py-3 font-semibold text-lg ${
+                activeTab === "orders"
+                  ? "border-b-2 text-blue-600 border-blue-600"
+                  : "text-gray-600 dark:text-gray-400 hover:text-blue-500"
+              }`}
+              onClick={() => setActiveTab("orders")}
+            >
+              Orders Data
+            </button>
+          </div>
 
             {/* Sales Tab */}
             {activeTab === "sales" && (
@@ -911,18 +911,38 @@ const SalesData = () => {
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <button
-                      onClick={() =>
-                        exportToExcel(filteredSalesData, "Daily_Sales")
-                      }
+                      onClick={() => {
+                        setConfirmModal({
+                          isOpen: true,
+                          type: "info",
+                          title: "Export Sales to Excel",
+                          message: "Do you want to download the sales data as Excel?",
+                          onConfirm: () => {
+                            exportToExcel(filteredSalesData, "Daily_Sales");
+                            setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
+                          },
+                          loading: false
+                        });
+                      }}
                       className="flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
                     >
                       <FiDownload />{" "}
                       <span className="hidden sm:inline">Export</span> Excel
                     </button>
                     <button
-                      onClick={() =>
-                        exportToPDF(filteredSalesData, "Daily_Sales")
-                      }
+                      onClick={() => {
+                        setConfirmModal({
+                          isOpen: true,
+                          type: "info",
+                          title: "Export Sales to PDF",
+                          message: "Do you want to download the sales data as PDF?",
+                          onConfirm: () => {
+                            exportToPDF(filteredSalesData, "Daily_Sales");
+                            setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
+                          },
+                          loading: false
+                        });
+                      }}
                       className="flex items-center justify-center gap-2 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
                     >
                       <FiFileText />{" "}
@@ -939,17 +959,49 @@ const SalesData = () => {
                           className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap cursor-pointer hover:bg-gray-700"
                           onClick={() => handleSort("date")}
                         >
-                          Date{" "}
-                          {sortConfig.key === "date" &&
-                            (sortConfig.direction === "asc" ? "↑" : "↓")}
+                          <div className="flex items-center justify-center">
+                            Date
+                            <div className="flex flex-col ml-1">
+                              <FaSortUp
+                                className={`text-xs ${
+                                  sortConfig.key === "date" && sortConfig.direction === "asc"
+                                    ? "text-blue-400"
+                                    : "text-gray-400"
+                                }`}
+                              />
+                              <FaSortDown
+                                className={`text-xs -mt-1 ${
+                                  sortConfig.key === "date" && sortConfig.direction === "desc"
+                                    ? "text-blue-400"
+                                    : "text-gray-400"
+                                }`}
+                              />
+                            </div>
+                          </div>
                         </th>
                         <th
                           className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap cursor-pointer hover:bg-gray-700"
                           onClick={() => handleSort("openingCash")}
                         >
-                          Opening{" "}
-                          {sortConfig.key === "openingCash" &&
-                            (sortConfig.direction === "asc" ? "↑" : "↓")}
+                          <div className="flex items-center justify-center">
+                            Opening
+                            <div className="flex flex-col ml-1">
+                              <FaSortUp
+                                className={`text-xs ${
+                                  sortConfig.key === "openingCash" && sortConfig.direction === "asc"
+                                    ? "text-blue-400"
+                                    : "text-gray-400"
+                                }`}
+                              />
+                              <FaSortDown
+                                className={`text-xs -mt-1 ${
+                                  sortConfig.key === "openingCash" && sortConfig.direction === "desc"
+                                    ? "text-blue-400"
+                                    : "text-gray-400"
+                                }`}
+                              />
+                            </div>
+                          </div>
                         </th>
                         <th
                           className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap cursor-pointer hover:bg-gray-700"
@@ -991,6 +1043,17 @@ const SalesData = () => {
                           {sortConfig.key === "closingCash" &&
                             (sortConfig.direction === "asc" ? "↑" : "↓")}
                         </th>
+                          <th
+                            className="border border-blue-300 dark:border-blue-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap cursor-pointer bg-blue-600 hover:bg-blue-700"
+                            onClick={() => handleSort("totalSales")}
+                          >
+                            Total Sales{" "}
+                            {sortConfig.key === "totalSales" &&
+                              (sortConfig.direction === "asc" ? "↑" : "↓")}
+                          </th>
+                        <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap">
+                          Attachment
+                        </th>
                         <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap">
                           Actions
                         </th>
@@ -1000,7 +1063,7 @@ const SalesData = () => {
                       {loading ? (
                         <tr>
                           <td
-                            colSpan="8"
+                            colSpan="10"
                             className="border border-gray-300 dark:border-gray-600 px-4 py-8 text-center"
                           >
                             <div className="flex justify-center items-center">
@@ -1014,7 +1077,7 @@ const SalesData = () => {
                       ) : filteredSalesData.length === 0 ? (
                         <tr>
                           <td
-                            colSpan="8"
+                            colSpan="10"
                             className="border border-gray-300 dark:border-gray-600 px-4 py-8 text-center text-gray-500 dark:text-gray-400"
                           >
                             No sales data available. Add sales entries from the
@@ -1058,6 +1121,22 @@ const SalesData = () => {
                             <td className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap">
                               ₹
                               {Number(sale.closingCash).toLocaleString("en-IN")}
+                            </td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap bg-blue-50 dark:bg-blue-900 font-semibold">
+                              ₹
+{Number(sale.totalSales).toLocaleString("en-IN")}                            </td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap">
+                              {sale.fileUrl ? (
+                                <button
+                                  className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors"
+                                  onClick={() => handleViewAttachment(sale.fileUrl, sale.fileUrl.split("/").pop())}
+                                >
+                                  <FiEye className="text-sm" />
+                                  View
+                                </button>
+                              ) : (
+                                "No file"
+                              )}
                             </td>
                             <td className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm">
                               <div className="flex gap-2">
@@ -1168,16 +1247,38 @@ const SalesData = () => {
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <button
-                      onClick={() =>
-                        exportToExcel(filteredOrdersData, "Orders")
-                      }
+                      onClick={() => {
+                        setConfirmModal({
+                          isOpen: true,
+                          type: "info",
+                          title: "Export Orders to Excel",
+                          message: "Do you want to download the orders data as Excel?",
+                          onConfirm: () => {
+                            exportToExcel(filteredOrdersData, "Orders");
+                            setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
+                          },
+                          loading: false
+                        });
+                      }}
                       className="flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
                     >
                       <FiDownload />{" "}
                       <span className="hidden sm:inline">Export</span> Excel
                     </button>
                     <button
-                      onClick={() => exportToPDF(filteredOrdersData, "Orders")}
+                      onClick={() => {
+                        setConfirmModal({
+                          isOpen: true,
+                          type: "info",
+                          title: "Export Orders to PDF",
+                          message: "Do you want to download the orders data as PDF?",
+                          onConfirm: () => {
+                            exportToPDF(filteredOrdersData, "Orders");
+                            setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
+                          },
+                          loading: false
+                        });
+                      }}
                       className="flex items-center justify-center gap-2 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
                     >
                       <FiFileText />{" "}
@@ -1215,7 +1316,7 @@ const SalesData = () => {
                             (sortConfig.direction === "asc" ? "↑" : "↓")}
                         </th>
                         <th
-                          className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap cursor-pointer hover:bg-gray-700"
+                          className="border border-blue-600 bg-blue-600 dark:border-blue-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap cursor-pointer hover:bg-blue-700"
                           onClick={() => handleSort("amount")}
                         >
                           Amount{" "}
@@ -1234,6 +1335,9 @@ const SalesData = () => {
                           Remarks
                         </th>
                         <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap">
+                          Attachment
+                        </th>
+                        <th className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap">
                           Actions
                         </th>
                       </tr>
@@ -1242,7 +1346,7 @@ const SalesData = () => {
                       {loading ? (
                         <tr>
                           <td
-                            colSpan="7"
+                            colSpan="8"
                             className="border border-gray-300 dark:border-gray-600 px-4 py-8 text-center"
                           >
                             <div className="flex justify-center items-center">
@@ -1256,7 +1360,7 @@ const SalesData = () => {
                       ) : filteredOrdersData.length === 0 ? (
                         <tr>
                           <td
-                            colSpan="7"
+                            colSpan="8"
                             className="border border-gray-300 dark:border-gray-600 px-4 py-8 text-center text-gray-500 dark:text-gray-400"
                           >
                             No order data available. Add order entries from the
@@ -1278,7 +1382,7 @@ const SalesData = () => {
                             <td className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap">
                               {order.orderId}
                             </td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap">
+                            <td className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap bg-blue-50 dark:bg-blue-900 font-semibold">
                               ₹{Number(order.amount).toLocaleString("en-IN")}
                             </td>
                             <td className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap">
@@ -1303,6 +1407,19 @@ const SalesData = () => {
                               >
                                 {order.remarks || "-"}
                               </div>
+                            </td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm whitespace-nowrap">
+                              {order.fileUrl ? (
+                                <button
+                                  className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors"
+                                  onClick={() => handleViewAttachment(order.fileUrl, order.fileUrl.split("/").pop())}
+                                >
+                                  <FiEye className="text-sm" />
+                                  View
+                                </button>
+                              ) : (
+                                "No file"
+                              )}
                             </td>
                             <td className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm">
                               <div className="flex gap-2">
@@ -1386,15 +1503,22 @@ const SalesData = () => {
 
       {/* Modals */}
       <ConfirmationModal
-        isOpen={actionModal.open}
-        onClose={() =>
-          setActionModal({ open: false, type: null, row: null, itemType: null })
-        }
-        onConfirm={handleConfirmAction}
-        message={`Are you sure you want to delete this ${
-          actionModal.itemType === "sales" ? "sale" : "order"
-        }?`}
-        loading={deletingId === actionModal.row?._id}
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        loading={confirmModal.loading}
+        confirmText="Confirm"
+        cancelText="Cancel"
+      />
+
+      <AttachmentModal
+        isOpen={attachmentModal.isOpen}
+        onClose={() => setAttachmentModal({ isOpen: false, fileUrl: "", fileName: "" })}
+        fileUrl={attachmentModal.fileUrl}
+        fileName={attachmentModal.fileName}
       />
 
       {editModal.open && editModal.type === "sales" && (
@@ -1412,6 +1536,8 @@ const SalesData = () => {
           onSave={(id, data) => handleSaveEdit(id, data, "orders")}
         />
       )}
+
+      <ToastContainer />
     </div>
   );
 };

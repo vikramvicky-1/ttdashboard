@@ -70,36 +70,46 @@ const Ecommerce = () => {
   } = useSalesStore();
 
   useEffect(() => {
-    if (isDateRangeActive && fromDate && toDate) {
-      // Use date range filter
-      getDateRangeExpense(fromDate, toDate);
-      getDateRangeLoansExpense(fromDate, toDate);
-      getDateRangeTotalSales(fromDate, toDate);
-    } else {
-      // Use month/year filter
-      if (selectedMonth === 0) {
-        getYearlyExpenseSummary(selectedYear);
-        getYearlySales(selectedYear);
+    const fetchData = async () => {
+      if (isDateRangeActive && fromDate && toDate) {
+        // Use date range filter
+        await Promise.all([
+          getDateRangeExpense(fromDate, toDate),
+          getDateRangeLoansExpense(fromDate, toDate),
+          getDateRangeTotalSales(fromDate, toDate)
+        ]);
       } else {
-        getMonthlyExpense(selectedMonth, selectedYear);
-        getTotalLoansExpense(selectedMonth, selectedYear);
-        getTotalSales(selectedMonth, selectedYear);
+        // Use month/year filter
+        if (selectedMonth === 0) {
+          await Promise.all([
+            getYearlyExpenseSummary(selectedYear),
+            getYearlySales(selectedYear)
+          ]);
+        } else {
+          await Promise.all([
+            getMonthlyExpense(selectedMonth, selectedYear),
+            getTotalLoansExpense(selectedMonth, selectedYear),
+            getTotalSales(selectedMonth, selectedYear)
+          ]);
+        }
       }
-    }
+    };
+    
+    fetchData();
   }, [
     selectedMonth,
     selectedYear,
-    getMonthlyExpense,
-    getTotalLoansExpense,
-    getYearlyExpenseSummary,
     isDateRangeActive,
     fromDate,
     toDate,
     getDateRangeExpense,
     getDateRangeLoansExpense,
-    getTotalSales,
-    getYearlySales,
     getDateRangeTotalSales,
+    getYearlyExpenseSummary,
+    getYearlySales,
+    getMonthlyExpense,
+    getTotalLoansExpense,
+    getTotalSales
   ]);
 
   // Use yearly or monthly data based on selection

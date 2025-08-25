@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { ChartsHeader, Doughnut as PieChart } from "../../components";
+import { ChartsHeader, Doughnut as PieChart, ConfirmationModal, AttachmentModal } from "../../components";
 import useExpenseStore from "../../Store/ExpenseStore";
 import { useStateContext } from "../../contexts/ContextProvider";
 import {
@@ -10,9 +10,10 @@ import {
   FaSortUp,
   FaSortDown,
 } from "react-icons/fa";
+import { FiEye } from "react-icons/fi";
 import * as XLSX from "xlsx";
-import { jsPDF } from "jspdf";
-
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 const paymentModes = ["Cash", "Online"];
 
 const monthNames = [
@@ -47,6 +48,22 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [deletingExpenseId, setDeletingExpenseId] = useState(null);
+  // Attachment modal state
+  const [attachmentModal, setAttachmentModal] = useState({
+    isOpen: false,
+    fileUrl: "",
+    fileName: ""
+  });
+  
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    type: null,
+    title: "",
+    message: "",
+    onConfirm: null,
+    loading: false
+  });
 
   // Helper to format date as dd/mm/yyyy
   const formatDate = (dateStr) => {
@@ -113,29 +130,83 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
     });
   };
 
-  // Export to Excel
-  const handleExportExcel = () => {
-    setModal({ open: true, type: "excel" });
-  };
-
   // Ref for the table
   const tableRef = React.useRef(null);
 
-  // Export to PDF using jsPDF + autoTable (portrait, all columns visible)
-  const handleExportPDF = () => {
-    setModal({ open: true, type: "pdf" });
+  // Export to Excel
+  const handleExportExcel = () => {
+    setConfirmModal({
+      isOpen: true,
+      type: "info",
+      title: "Export Excel",
+      message: "Do you want to download the expense report as Excel?",
+      onConfirm: () => {
+        doExportExcel();
+        setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
+      },
+      loading: false
+    });
   };
 
-  const [modal, setModal] = useState({
-    open: false,
-    type: null,
-    payload: null,
-  });
+  // Export to PDF
+  const handleExportPDF = () => {
+    setConfirmModal({
+      isOpen: true,
+      type: "info",
+      title: "Export PDF",
+      message: "Do you want to download the expense report as PDF?",
+      onConfirm: () => {
+        doExportPDF();
+        setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
+      },
+      loading: false
+    });
+  };
 
-  const confirmDownload = () => {
-    if (modal.type === "excel") doExportExcel();
-    if (modal.type === "pdf") doExportPDF();
-    setModal({ open: false, type: null });
+  // Export to PDF using jsPDF + autoTable (portrait, all columns visible)
+  const downloadPDF = () => {
+    setConfirmModal({
+      isOpen: true,
+      type: "info",
+      title: "Download PDF",
+      message: "Are you sure you want to download the expense data as PDF?",
+      onConfirm: async () => {
+        try {
+          setConfirmModal(prev => ({ ...prev, loading: true }));
+          const doc = new jsPDF({ orientation: "landscape" });
+          doc.text("Expense Report", 20, 20);
+          
+          const tableData = filteredExpenses.map(exp => [
+            formatDate(exp.date),
+            exp.category,
+            exp.subCategory || "",
+            `₹${exp.amount}`,
+            exp.paymentStatus || "",
+            exp.paymentMode || "",
+            exp.attachment ? "Yes" : "No",
+            exp.remarks || exp.remark || ""
+          ]);
+          
+          doc.autoTable({
+            head: [[
+              "Date", "Category", "Sub-Category", "Amount", 
+              "Status", "Payment Mode", "Attachment", "Remarks"
+            ]],
+            body: tableData,
+            startY: 30,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [66, 139, 202] }
+          });
+          
+          doc.save(`expense-report-${new Date().toISOString().split('T')[0]}.pdf`);
+          setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
+        } catch (error) {
+          console.error("Error generating PDF:", error);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+      loading: false
+    });
   };
 
   const doExportExcel = () => {
@@ -256,30 +327,48 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
     row: null,
   });
   const [editModal, setEditModal] = useState({ open: false, expense: null });
-  const handleEdit = (row) => setActionModal({ open: true, type: "edit", row });
-  const handleDelete = (row) =>
-    setActionModal({ open: true, type: "delete", row });
-  const confirmAction = async () => {
-    if (actionModal.type === "edit") {
-      setEditModal({ open: true, expense: actionModal.row });
-      setActionModal({ open: false, type: null, row: null });
-    } else if (actionModal.type === "delete") {
-      try {
-        setDeletingExpenseId(actionModal.row._id);
-        await deleteExpense(actionModal.row._id);
-        // Refresh data
-        if (storeMonth === 0) {
-          await getYearlyExpenseSummary(storeYear);
-        } else {
-          await getMonthlyExpenseData(storeMonth, storeYear);
-        }
-      } catch (error) {
-        console.error("Error deleting expense:", error);
-      } finally {
-        setDeletingExpenseId(null);
-        setActionModal({ open: false, type: null, row: null });
+  const handleUpdateExpense = async (expenseId, updatedData) => {
+    try {
+      await updateExpense(expenseId, updatedData);
+      // Refresh data
+      if (storeMonth === 0) {
+        await getYearlyExpenseSummary(storeYear);
+      } else {
+        await getMonthlyExpenseData(storeMonth, storeYear);
       }
+      setEditModal({ open: false, expense: null });
+    } catch (error) {
+      console.error("Error updating expense:", error);
+      throw error;
     }
+  };
+
+  const handleDeleteExpense = async (expense) => {
+    try {
+      setConfirmModal(prev => ({ ...prev, loading: true }));
+      setDeletingExpenseId(expense._id);
+      await deleteExpense(expense._id);
+      // Refresh data
+      if (storeMonth === 0) {
+        await getYearlyExpenseSummary(storeYear);
+      } else {
+        await getMonthlyExpenseData(storeMonth, storeYear);
+      }
+      setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
+    } catch (error) {
+      console.error("Error deleting expense:", error);
+      setConfirmModal(prev => ({ ...prev, loading: false }));
+    } finally {
+      setDeletingExpenseId(null);
+    }
+  };
+
+  const handleViewAttachment = (fileUrl, fileName) => {
+    setAttachmentModal({
+      isOpen: true,
+      fileUrl: fileUrl,
+      fileName: fileName
+    });
   };
 
   const [downloadModal, setDownloadModal] = useState({
@@ -487,28 +576,28 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
                     )}
                   </td>
                   <td className="border px-3 py-3 whitespace-nowrap text-base">
-                    {exp.paymentMode || ""}
+                    {exp.paymentMode || "-"}
                   </td>
                   <td className="border px-3 py-3 whitespace-nowrap text-base">
-                    {exp.fileUrl ? (
+                    {exp.attachment ? (
                       <button
-                        className="text-blue-600 underline cursor-pointer"
-                        onClick={() =>
-                          setDownloadModal({
-                            open: true,
-                            url: exp.fileUrl,
-                            filename: exp.fileUrl.split("/").pop(),
-                          })
-                        }
+                        className="text-blue-500 hover:text-blue-700"
+                        onClick={() => {
+                          setAttachmentModal({
+                            isOpen: true,
+                            fileUrl: exp.attachment,
+                            fileName: exp.attachmentName || 'Attachment'
+                          });
+                        }}
                       >
-                        {exp.fileUrl.split("/").pop()}
+                        View
                       </button>
                     ) : (
-                      ""
+                      "No file"
                     )}
                   </td>
                   <td className="border px-3 py-3 whitespace-nowrap text-base">
-                    {exp.remarks || exp.remark || ""}
+                    {exp.remarks || exp.remark || "-"}
                   </td>
                   <td className="border px-3 py-3 whitespace-nowrap flex gap-3 justify-center items-center">
                     <button
@@ -518,7 +607,9 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
                           : "text-blue-500 hover:text-blue-700"
                       }`}
                       title="Edit"
-                      onClick={() => handleEdit(exp)}
+                      onClick={() => {
+                        setEditModal({ open: true, expense: exp });
+                      }}
                       disabled={deletingExpenseId}
                     >
                       <FaEdit className="text-2xl" />
@@ -530,7 +621,16 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
                           : "text-red-500 hover:text-red-700"
                       }`}
                       title="Delete"
-                      onClick={() => handleDelete(exp)}
+                      onClick={() => {
+                        setConfirmModal({
+                          isOpen: true,
+                          type: 'danger',
+                          title: 'Delete Expense',
+                          message: `Are you sure you want to delete this expense? This action cannot be undone.`,
+                          onConfirm: () => handleDeleteExpense(exp),
+                          loading: false
+                        });
+                      }}
                       disabled={deletingExpenseId === exp._id}
                     >
                       {deletingExpenseId === exp._id ? (
@@ -546,28 +646,25 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
           </tbody>
         </table>
       </div>
-      <ConfirmModal
-        open={modal.open}
-        onClose={() => setModal({ open: false, type: null })}
-        onConfirm={confirmDownload}
-        title={modal.type === "excel" ? "Download Excel?" : "Download PDF?"}
-        confirmText="Download"
-        confirmColor="bg-green-600"
+      {/* Attachment Modal */}
+      <AttachmentModal
+        isOpen={attachmentModal.isOpen}
+        onClose={() => setAttachmentModal({ isOpen: false, fileUrl: null, fileName: '' })}
+        fileUrl={attachmentModal.fileUrl}
+        fileName={attachmentModal.fileName}
       />
-      <ConfirmModal
-        open={actionModal.open}
-        onClose={() => setActionModal({ open: false, type: null, row: null })}
-        onConfirm={confirmAction}
-        title={
-          actionModal.type === "edit"
-            ? "Edit this expense?"
-            : "Are you sure you want to delete this expense?"
-        }
-        confirmText={actionModal.type === "edit" ? "Edit" : "Delete"}
-        confirmColor={
-          actionModal.type === "edit" ? "bg-blue-600" : "bg-red-600"
-        }
-        loading={deletingExpenseId && actionModal.type === "delete"}
+      
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false })}
+        onConfirm={confirmModal.onConfirm || (() => {})}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.type === 'danger' ? 'Delete' : 'Confirm'}
+        cancelText="Cancel"
+        type={confirmModal.type}
+        loading={confirmModal.loading}
       />
       {/* Edit Modal */}
       {editModal.open && (
@@ -625,30 +722,38 @@ const Pie = () => {
   const [view, setView] = useState("pie"); // "pie" or "table"
 
   useEffect(() => {
-    if (isDateRangeActive && fromDate && toDate) {
-      // Use date range filter
-      getDateRangePieChartData(fromDate, toDate);
-      getDateRangeExpenseData(fromDate, toDate);
-    } else {
-      // Use month/year filter
-      if (selectedMonth === 0) {
-        getYearlyExpenseSummary(selectedYear);
+    const fetchData = async () => {
+      if (isDateRangeActive && fromDate && toDate) {
+        // Use date range filter
+        await Promise.all([
+          getDateRangePieChartData(fromDate, toDate),
+          getDateRangeExpenseData(fromDate, toDate)
+        ]);
       } else {
-        getExpensePieChartData(selectedMonth, selectedYear);
-        getMonthlyExpenseData(selectedMonth, selectedYear);
+        // Use month/year filter
+        if (selectedMonth === 0) {
+          await getYearlyExpenseSummary(selectedYear);
+        } else {
+          await Promise.all([
+            getExpensePieChartData(selectedMonth, selectedYear),
+            getMonthlyExpenseData(selectedMonth, selectedYear)
+          ]);
+        }
       }
-    }
+    };
+    
+    fetchData();
   }, [
     selectedMonth,
     selectedYear,
-    getExpensePieChartData,
-    getYearlyExpenseSummary,
-    getMonthlyExpenseData,
     isDateRangeActive,
     fromDate,
     toDate,
     getDateRangePieChartData,
     getDateRangeExpenseData,
+    getYearlyExpenseSummary,
+    getExpensePieChartData,
+    getMonthlyExpenseData
   ]);
 
   // Use yearly or monthly data based on selection
@@ -771,19 +876,19 @@ const ConfirmModal = ({
 // EditExpenseModal component
 const EditExpenseModal = ({ expense, onClose, onSave }) => {
   const { currentColor, currentMode } = useStateContext();
-  const { categories, categorySubMap, getExpenseCategories } =
-    useExpenseStore();
+  const { categories, categorySubMap, getExpenseCategories } = useExpenseStore();
   const [form, setForm] = useState({ ...expense, file: null });
-  const [showPaymentMode, setShowPaymentMode] = useState(
-    expense.paymentStatus === "Paid"
-  );
+  const [showPaymentMode, setShowPaymentMode] = useState(expense.paymentStatus === "Paid");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
+
   React.useEffect(() => {
     getExpenseCategories();
   }, [getExpenseCategories]);
+
   const today = new Date().toISOString().split("T")[0];
+
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
     setForm((prev) => ({
@@ -833,19 +938,23 @@ const EditExpenseModal = ({ expense, onClose, onSave }) => {
     }
   };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div
-        className={`w-full max-w-2xl md:rounded-xl rounded-none shadow-2xl p-2 md:p-6 ${
+        className={`${
           currentMode === "Dark"
-            ? "bg-[#23272e] text-gray-100"
-            : "bg-white text-gray-900"
-        }`}
-        style={{ minHeight: "100vh", maxHeight: "100vh", overflowY: "auto" }}
+            ? "bg-gray-800 text-white"
+            : "bg-white text-gray-800"
+        } rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto`}
       >
-        <h2 className="text-2xl font-bold mb-4 md:mb-6 text-center">
-          Edit Expense
-        </h2>
-        {error && <div className="text-red-600 text-center mb-4">{error}</div>}
+        <div className="p-6">
+          <h2 className="text-2xl font-bold mb-4 md:mb-6 text-center">
+            Edit Expense
+          </h2>
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
         <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {/* Basic Information */}
@@ -866,7 +975,7 @@ const EditExpenseModal = ({ expense, onClose, onSave }) => {
                   onChange={handleChange}
                   required
                   max={today}
-                  className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400 bg-inherit"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
               <div className="mb-4">
@@ -897,45 +1006,53 @@ const EditExpenseModal = ({ expense, onClose, onSave }) => {
                     ))}
                 </select>
               </div>
-              <div className="mb-4">
-                <label
-                  htmlFor="editExpenseSubCategory"
-                  className="block mb-1 font-medium"
-                >
-                  Sub-Category
-                  {form.category &&
-                    categorySubMap[form.category] &&
-                    categorySubMap[form.category].length > 0 && (
-                      <span className="text-red-500">*</span>
-                    )}
-                </label>
-                <select
-                  id="editExpenseSubCategory"
-                  name="subCategory"
-                  value={form.subCategory}
-                  onChange={handleChange}
-                  className={`w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                    currentMode === "Dark"
-                      ? "bg-[#23272e] text-gray-100"
-                      : "bg-white text-gray-900"
-                  }`}
-                  disabled={!form.category || !categorySubMap[form.category]}
-                  required={
-                    form.category &&
-                    categorySubMap[form.category] &&
-                    categorySubMap[form.category].length > 0
-                  }
-                >
-                  <option value="">Select Sub-Category</option>
-                  {form.category &&
-                    categorySubMap[form.category] &&
-                    categorySubMap[form.category].map((sub) => (
+              {/* Only show subcategory field if category has subcategories */}
+              {form.category &&
+                categorySubMap[form.category] &&
+                categorySubMap[form.category].length > 0 && (
+                <div className="mb-4">
+                  <label
+                    htmlFor="editExpenseSubCategory"
+                    className="block mb-1 font-medium"
+                  >
+                    Sub-Category <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="editExpenseSubCategory"
+                    name="subCategory"
+                    value={form.subCategory}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                      currentMode === "Dark"
+                        ? "bg-[#23272e] text-gray-100"
+                        : "bg-white text-gray-900"
+                    }`}
+                    required
+                  >
+                    <option value="">Select Sub-Category</option>
+                    {categorySubMap[form.category].map((sub) => (
                       <option key={sub} value={sub}>
                         {sub}
                       </option>
                     ))}
-                </select>
-              </div>
+                  </select>
+                </div>
+              )}
+              
+              {/* Show message when category has no subcategories */}
+              {form.category &&
+                categorySubMap[form.category] &&
+                categorySubMap[form.category].length === 0 && (
+                <div className="mb-4">
+                  <div className={`px-3 py-2 rounded border text-sm ${
+                    currentMode === "Dark"
+                      ? "bg-gray-700 text-gray-300 border-gray-600"
+                      : "bg-gray-100 text-gray-600 border-gray-300"
+                  }`}>
+                    No subcategories available for "{form.category}"
+                  </div>
+                </div>
+              )}
               <div className="mb-4">
                 <label
                   htmlFor="editExpenseAmount"
@@ -1083,7 +1200,8 @@ const EditExpenseModal = ({ expense, onClose, onSave }) => {
               {submitting ? "Saving..." : "Save"}
             </button>
           </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

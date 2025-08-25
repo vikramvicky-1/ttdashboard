@@ -8,7 +8,7 @@ import { TooltipComponent } from "@syncfusion/ej2-react-popups";
 import { useStateContext } from "../contexts/ContextProvider";
 import avatar from "../data/avatar.jpg";
 import { UserProfile, DateRangeFilter } from ".";
-import useExpenseStore from "../Store/ExpenseStore";
+import useSalesStore from "../Store/SalesStore";
 
 const months = [
   "All",
@@ -68,7 +68,7 @@ const Navbar = () => {
     setSelectedMonth,
     setSelectedYear,
     isDateRangeActive,
-  } = useExpenseStore();
+  } = useSalesStore();
   const profileRef = useRef(null);
   useEffect(() => {
     const handleResize = () => setScreenSize(window.innerWidth);

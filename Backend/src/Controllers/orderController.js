@@ -18,6 +18,176 @@ export const createOrder = async (req, res) => {
   }
 };
 
+// Yearly summary for orders (total amount and count)
+export const getYearlyOrdersSummary = async (req, res) => {
+  try {
+    const { year } = req.query;
+    if (!year) {
+      return res.status(400).json({
+        error: "Year is required (e.g. ?year=2025)",
+      });
+    }
+    const yearInt = parseInt(year);
+    if (isNaN(yearInt)) {
+      return res.status(400).json({ error: "Invalid year" });
+    }
+
+    const startDate = new Date(yearInt, 0, 1);
+    const endDate = new Date(yearInt + 1, 0, 1);
+
+    const totalResult = await Order.aggregate([
+      {
+        $match: {
+          orderDate: { $gte: startDate, $lt: endDate },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$amount" },
+          totalOrders: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const result = totalResult[0] || { totalAmount: 0, totalOrders: 0 };
+    return res.status(200).json({
+      totalYearlyOrdersAmount: result.totalAmount,
+      totalYearlyOrdersCount: result.totalOrders,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get total orders amount for monthly period
+export const getMonthlyOrdersTotal = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    if (!month || !year) {
+      return res.status(400).json({
+        error: "Month and year are required (e.g. ?month=7&year=2025)",
+      });
+    }
+    const monthInt = parseInt(month);
+    const yearInt = parseInt(year);
+    if (isNaN(monthInt) || isNaN(yearInt) || monthInt < 1 || monthInt > 12) {
+      return res.status(400).json({ error: "Invalid month or year" });
+    }
+
+    const startDate = new Date(yearInt, monthInt - 1, 1);
+    const endDate = new Date(yearInt, monthInt, 1);
+
+    const totalResult = await Order.aggregate([
+      {
+        $match: {
+          orderDate: { $gte: startDate, $lt: endDate },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$amount" },
+          totalOrders: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const result = totalResult[0] || { totalAmount: 0, totalOrders: 0 };
+    return res.status(200).json({
+      totalOrdersAmount: result.totalAmount,
+      totalOrdersCount: result.totalOrders,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get total orders amount for yearly period
+export const getYearlyOrdersTotal = async (req, res) => {
+  try {
+    const { year } = req.query;
+    if (!year) {
+      return res.status(400).json({
+        error: "Year is required (e.g. ?year=2025)",
+      });
+    }
+    const yearInt = parseInt(year);
+    if (isNaN(yearInt)) {
+      return res.status(400).json({ error: "Invalid year" });
+    }
+
+    const startDate = new Date(yearInt, 0, 1);
+    const endDate = new Date(yearInt + 1, 0, 1);
+
+    const totalResult = await Order.aggregate([
+      {
+        $match: {
+          orderDate: { $gte: startDate, $lt: endDate },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$amount" },
+          totalOrders: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const result = totalResult[0] || { totalAmount: 0, totalOrders: 0 };
+    return res.status(200).json({
+      totalOrdersAmount: result.totalAmount,
+      totalOrdersCount: result.totalOrders,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get total orders amount for date range
+export const getDateRangeOrdersTotal = async (req, res) => {
+  try {
+    const { fromDate, toDate } = req.query;
+    if (!fromDate || !toDate) {
+      return res.status(400).json({
+        error: "fromDate and toDate are required (e.g. ?fromDate=2025-07-01&toDate=2025-07-31)",
+      });
+    }
+
+    const startDate = new Date(fromDate);
+    const endDate = new Date(toDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: "Invalid date format" });
+    }
+
+    const totalResult = await Order.aggregate([
+      {
+        $match: {
+          orderDate: { $gte: startDate, $lte: endDate },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$amount" },
+          totalOrders: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const result = totalResult[0] || { totalAmount: 0, totalOrders: 0 };
+    return res.status(200).json({
+      totalOrdersAmount: result.totalAmount,
+      totalOrdersCount: result.totalOrders,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 export const getMonthlyOrders = async (req, res) => {
   try {
     const { month, year } = req.query;
@@ -87,6 +257,33 @@ export const getMonthlyOrderData = async (req, res) => {
     res.status(200).json({
       orders,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Yearly orders list for "All months" view
+export const getYearlyOrderData = async (req, res) => {
+  try {
+    const { year } = req.query;
+    if (!year) {
+      return res.status(400).json({
+        error: "Year is required (e.g. ?year=2025)",
+      });
+    }
+    const yearInt = parseInt(year);
+    if (isNaN(yearInt)) {
+      return res.status(400).json({ error: "Invalid year" });
+    }
+
+    const startDate = new Date(yearInt, 0, 1);
+    const endDate = new Date(yearInt + 1, 0, 1);
+
+    const orders = await Order.find({
+      orderDate: { $gte: startDate, $lt: endDate },
+    }).lean();
+
+    res.status(200).json({ orders });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

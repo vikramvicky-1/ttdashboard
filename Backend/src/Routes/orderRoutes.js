@@ -2,9 +2,14 @@ import express from "express";
 import {
   createOrder,
   getMonthlyOrders,
+  getYearlyOrdersSummary,
   getMonthlyOrderData,
-  deleteOrder,
+  getYearlyOrderData,
+  getMonthlyOrdersTotal,
+  getYearlyOrdersTotal,
+  getDateRangeOrdersTotal,
   updateOrder,
+  deleteOrder,
   getDateRangeOrders,
   getDateRangeOrderData,
 } from "../Controllers/orderController.js";
@@ -51,11 +56,18 @@ const upload = multer({
 router.post("/add-order", upload.single("file"), createOrder);
 router.get("/monthly-orders", getMonthlyOrders);
 router.get("/monthly-order-data", getMonthlyOrderData);
+router.get("/yearly-orders", getYearlyOrdersSummary);
+router.get("/yearly-order-data", getYearlyOrderData);
 router.delete("/delete-order/:id", deleteOrder);
 router.put("/update-order/:id", upload.single("file"), updateOrder);
 
 // Date range filter routes
 router.get("/date-range-orders", getDateRangeOrders);
 router.get("/date-range-order-data", getDateRangeOrderData);
+
+// Total orders amount routes
+router.get("/monthly-orders-total", getMonthlyOrdersTotal);
+router.get("/yearly-orders-total", getYearlyOrdersTotal);
+router.get("/date-range-orders-total", getDateRangeOrdersTotal);
 
 export default router;

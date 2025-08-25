@@ -9,6 +9,7 @@ import {
   Login,
   DailySale,
   SalesData,
+  ManageCategories,
 } from "./pages";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -130,6 +131,25 @@ export const App = () => {
                   <Navbar />
                   <div className="pt-0">
                     <SalesData />
+                  </div>
+                </div>
+              </div>
+            }
+          />
+
+          <Route
+            path="/manage-categories"
+            element={
+              <div className="flex relative dark:bg-main-dark-bg">
+                <Sidebar />
+                <div
+                  className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
+                    activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
+                  }`}
+                >
+                  <Navbar />
+                  <div className="pt-0">
+                    <ManageCategories />
                   </div>
                 </div>
               </div>

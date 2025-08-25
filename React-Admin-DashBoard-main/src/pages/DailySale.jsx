@@ -1,7 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useStateContext } from "../contexts/ContextProvider";
-import { FiPlus } from "react-icons/fi";
+import { FiPlus, FiEye } from "react-icons/fi";
 import useSalesStore from "../Store/SalesStore";
+import { AttachmentModal } from "../components";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -11,6 +12,11 @@ const DailySale = () => {
   const [showSalesForm, setShowSalesForm] = useState(false);
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [attachmentModal, setAttachmentModal] = useState({
+    isOpen: false,
+    fileUrl: "",
+    fileName: ""
+  });
   const salesFileInputRef = useRef(null);
   const orderFileInputRef = useRef(null);
 
@@ -23,9 +29,27 @@ const DailySale = () => {
     physicalCash: "",
     cashTransferred: "",
     closingCash: "",
+    totalSales: 0, // start with 0
     remarks: "",
     file: null,
   });
+
+  // Update totalSales automatically
+  useEffect(() => {
+    const openingCash = Number(salesForm.openingCash) || 0;
+    const purchaseCash = Number(salesForm.purchaseCash) || 0;
+    const onlineCash = Number(salesForm.onlineCash) || 0;
+    const physicalCash = Number(salesForm.physicalCash) || 0;
+
+    const total = physicalCash + onlineCash + purchaseCash - openingCash;
+
+    setSalesForm((prev) => ({ ...prev, totalSales: total }));
+  }, [
+    salesForm.openingCash,
+    salesForm.purchaseCash,
+    salesForm.onlineCash,
+    salesForm.physicalCash,
+  ]);
 
   const [orderForm, setOrderForm] = useState({
     orderDate: "",
@@ -67,6 +91,7 @@ const DailySale = () => {
         physicalCash: "",
         cashTransferred: "",
         closingCash: "",
+        totalSales: 0,
         remarks: "",
         file: null,
       });
@@ -103,7 +128,6 @@ const DailySale = () => {
     }
   };
 
-  const today = new Date().toISOString().split("T")[0];
 
   return (
     <div
@@ -263,10 +287,11 @@ const DailySale = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Cash Transferred
+                        Cash Transferred <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="number"
+                        required
                         name="cashTransferred"
                         value={salesForm.cashTransferred}
                         onChange={handleSalesFormChange}
@@ -281,10 +306,11 @@ const DailySale = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Closing Cash
+                        Closing Cash <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="number"
+                        required
                         name="closingCash"
                         value={salesForm.closingCash}
                         onChange={handleSalesFormChange}
@@ -299,6 +325,26 @@ const DailySale = () => {
                     </div>
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Total Sale <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      name="totalSales"
+                      readOnly
+                      value={salesForm.totalSales}
+                      onChange={handleSalesFormChange}
+                      min="0"
+                      step="0.01"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        currentMode === "Dark"
+                          ? "bg-gray-700 border-gray-600 text-white"
+                          : "bg-white text-gray-900"
+                      }`}
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Remarks
@@ -320,18 +366,37 @@ const DailySale = () => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       File Attachment
                     </label>
-                    <input
-                      type="file"
-                      name="file"
-                      accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                      onChange={handleSalesFormChange}
-                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        currentMode === "Dark"
-                          ? "bg-gray-700 border-gray-600 text-white"
-                          : "bg-white text-gray-900"
-                      }`}
-                      ref={salesFileInputRef}
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="file"
+                        name="file"
+                        accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        onChange={handleSalesFormChange}
+                        className={`flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          currentMode === "Dark"
+                            ? "bg-gray-700 border-gray-600 text-white"
+                            : "bg-white text-gray-900"
+                        }`}
+                        ref={salesFileInputRef}
+                      />
+                      {salesForm.file && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const fileUrl = URL.createObjectURL(salesForm.file);
+                            setAttachmentModal({
+                              isOpen: true,
+                              fileUrl: fileUrl,
+                              fileName: salesForm.file.name
+                            });
+                          }}
+                          className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1"
+                        >
+                          <FiEye size={16} />
+                          View
+                        </button>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-500 mt-1">
                       Allowed: Images, PDFs, Word files. Max size: 10MB.
                     </p>
@@ -473,18 +538,37 @@ const DailySale = () => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       File Attachment
                     </label>
-                    <input
-                      type="file"
-                      name="file"
-                      accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                      onChange={handleOrderFormChange}
-                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        currentMode === "Dark"
-                          ? "bg-gray-700 border-gray-600 text-white"
-                          : "bg-white text-gray-900"
-                      }`}
-                      ref={orderFileInputRef}
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="file"
+                        name="file"
+                        accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        onChange={handleOrderFormChange}
+                        className={`flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          currentMode === "Dark"
+                            ? "bg-gray-700 border-gray-600 text-white"
+                            : "bg-white text-gray-900"
+                        }`}
+                        ref={orderFileInputRef}
+                      />
+                      {orderForm.file && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const fileUrl = URL.createObjectURL(orderForm.file);
+                            setAttachmentModal({
+                              isOpen: true,
+                              fileUrl: fileUrl,
+                              fileName: orderForm.file.name
+                            });
+                          }}
+                          className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1"
+                        >
+                          <FiEye size={16} />
+                          View
+                        </button>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-500 mt-1">
                       Allowed: Images, PDFs, Word files. Max size: 10MB.
                     </p>
@@ -534,6 +618,25 @@ const DailySale = () => {
           </div>
         </div>
       </div>
+
+      <AttachmentModal
+        isOpen={attachmentModal.isOpen}
+        onClose={() => setAttachmentModal({ isOpen: false, fileUrl: "", fileName: "" })}
+        fileUrl={attachmentModal.fileUrl}
+        fileName={attachmentModal.fileName}
+      />
+
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </div>
   );
 };
