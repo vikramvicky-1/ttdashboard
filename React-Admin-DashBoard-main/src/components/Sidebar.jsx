@@ -103,6 +103,7 @@ const Sidebar = () => {
           <div className="mb-4 flex flex-col gap-2 px-4">
             <Link
               to="/add-expense"
+              onClick={handleCloseSidebar}
               className="flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-white shadow-lg"
               style={{ background: currentColor }}
             >
@@ -111,6 +112,7 @@ const Sidebar = () => {
             </Link>
             <Link
               to="/daily-sale"
+              onClick={handleCloseSidebar}
               className="flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-white shadow-lg"
               style={{ background: currentColor }}
             >
