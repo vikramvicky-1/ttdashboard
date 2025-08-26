@@ -3,8 +3,6 @@ import { useStateContext } from "../contexts/ContextProvider";
 import { FiEye } from "react-icons/fi";
 import useExpenseStore from "../Store/ExpenseStore";
 import { AttachmentModal } from "../components";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 
 const paymentModes = ["Cash", "Online"];
 
@@ -100,7 +98,6 @@ const AddExpense = () => {
         currentMode === "Dark" ? "bg-[#23272e]" : "bg-gray-100"
       } main-content-mobile`}
     >
-      <ToastContainer position="top-center" autoClose={2000} />
       <div
         className={`w-full max-w-2xl rounded-xl shadow-2xl p-3 sm:p-4 md:p-6 ${
           currentMode === "Dark"

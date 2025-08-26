@@ -6,9 +6,9 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import useSalesStore from "../Store/SalesStore";
+import useExpenseStore from "../Store/ExpenseStore";
 import { ConfirmationModal, AttachmentModal } from "../components";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+ 
 
 // Edit Sales Modal Component
 const EditSalesModal = ({ sale, onClose, onSave }) => {
@@ -476,17 +476,21 @@ const SalesData = () => {
     deleteOrder,
     updateSale,
     updateOrder,
-    selectedMonth,
-    selectedYear,
-    isDateRangeActive,
-    fromDate,
-    toDate,
     getSalesData,
     getOrdersData,
     getDateRangeSalesData,
     getDateRangeOrdersData,
     getCombinedTotals,
   } = useSalesStore();
+
+  // Get date filter state from ExpenseStore (unified state management)
+  const {
+    selectedMonth,
+    selectedYear,
+    isDateRangeActive,
+    fromDate,
+    toDate,
+  } = useExpenseStore();
 
   const [activeTab, setActiveTab] = useState("sales");
   const [salesFilter, setSalesFilter] = useState("");
@@ -902,12 +906,7 @@ const SalesData = () => {
               <div>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                   <div className="w-full sm:w-auto">
-                    <input
-                      type="month"
-                      value={salesFilter}
-                      onChange={(e) => setSalesFilter(e.target.value)}
-                      className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    />
+                   
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <button
@@ -1179,18 +1178,7 @@ const SalesData = () => {
                 {filteredSalesData.length > 0 && (
                   <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <span className="font-semibold">Total Opening:</span>
-                        <div className="text-lg font-bold text-green-600">
-                          ₹
-                          {filteredSalesData
-                            .reduce(
-                              (sum, sale) => sum + Number(sale.openingCash),
-                              0
-                            )
-                            .toLocaleString("en-IN")}
-                        </div>
-                      </div>
+                     
                       <div>
                         <span className="font-semibold">Total Online:</span>
                         <div className="text-lg font-bold text-blue-600">
@@ -1205,7 +1193,7 @@ const SalesData = () => {
                       </div>
                       <div>
                         <span className="font-semibold">Total Physical:</span>
-                        <div className="text-lg font-bold text-purple-600">
+                        <div className="text-lg font-bold text-blue-600">
                           ₹
                           {filteredSalesData
                             .reduce(
@@ -1216,12 +1204,12 @@ const SalesData = () => {
                         </div>
                       </div>
                       <div>
-                        <span className="font-semibold">Total Closing:</span>
-                        <div className="text-lg font-bold text-orange-600">
+                        <span className="font-semibold">Total Sales:</span>
+                        <div className="text-lg font-bold text-green-600">
                           ₹
                           {filteredSalesData
                             .reduce(
-                              (sum, sale) => sum + Number(sale.closingCash),
+                              (sum, sale) => sum + Number(sale.totalSales),
                               0
                             )
                             .toLocaleString("en-IN")}
@@ -1238,12 +1226,7 @@ const SalesData = () => {
               <div>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                   <div className="w-full sm:w-auto">
-                    <input
-                      type="month"
-                      value={ordersFilter}
-                      onChange={(e) => setOrdersFilter(e.target.value)}
-                      className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    />
+                    
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <button
@@ -1537,7 +1520,6 @@ const SalesData = () => {
         />
       )}
 
-      <ToastContainer />
     </div>
   );
 };

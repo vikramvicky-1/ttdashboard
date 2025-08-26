@@ -19,7 +19,13 @@ const useExpenseStore = create((set, get) => ({
   monthlyExpense: 0,
   totalLoansExpense: null,
   expensePieChartData: [],
-  yearlyExpenseSummary: null, // { totalYearlyExpense, totalLoansExpense, expensePieChartData }
+  yearlyExpenseSummary: {
+    totalYearlyExpense: 0,
+    totalLoansExpense: 0,
+    expensePieChartData: [],
+    expenses: [],
+    categories: [],
+  }, // safe defaults to prevent undefined in UI
   monthlyExpenseData: { categories: [], expenses: [] },
   categories: [],
   categorySubMap: {},
@@ -29,6 +35,11 @@ const useExpenseStore = create((set, get) => ({
   fromDate: localStorage.getItem("fromDate") || "",
   toDate: localStorage.getItem("toDate") || "",
   isDateRangeActive: localStorage.getItem("isDateRangeActive") === "true",
+  // Data refresh trigger for real-time updates
+  dataRefreshTrigger: 0,
+  triggerDataRefresh: () => {
+    set((state) => ({ dataRefreshTrigger: state.dataRefreshTrigger + 1 }));
+  },
   setFromDate: (date) => {
     localStorage.setItem("fromDate", date);
     set({ fromDate: date });
@@ -37,14 +48,8 @@ const useExpenseStore = create((set, get) => ({
     if (date && toDate) {
       localStorage.setItem("isDateRangeActive", "true");
       set({ isDateRangeActive: true });
-      // Immediately fetch date range data
-      setTimeout(() => {
-        const { getDateRangePieChartData, getDateRangeExpenseData, getDateRangeExpense, getDateRangeLoansExpense } = get();
-        getDateRangePieChartData(date, toDate);
-        getDateRangeExpenseData(date, toDate);
-        getDateRangeExpense(date, toDate);
-        getDateRangeLoansExpense(date, toDate);
-      }, 0);
+      // Trigger data refresh after a small delay to ensure state is updated
+      setTimeout(() => get().triggerDataRefresh(), 100);
     }
   },
   setToDate: (date) => {
@@ -55,14 +60,8 @@ const useExpenseStore = create((set, get) => ({
     if (date && fromDate) {
       localStorage.setItem("isDateRangeActive", "true");
       set({ isDateRangeActive: true });
-      // Immediately fetch date range data
-      setTimeout(() => {
-        const { getDateRangePieChartData, getDateRangeExpenseData, getDateRangeExpense, getDateRangeLoansExpense } = get();
-        getDateRangePieChartData(fromDate, date);
-        getDateRangeExpenseData(fromDate, date);
-        getDateRangeExpense(fromDate, date);
-        getDateRangeLoansExpense(fromDate, date);
-      }, 0);
+      // Trigger data refresh after a small delay to ensure state is updated
+      setTimeout(() => get().triggerDataRefresh(), 100);
     }
   },
   setIsDateRangeActive: (active) => {
@@ -89,10 +88,17 @@ const useExpenseStore = create((set, get) => ({
       monthlyExpense: 0,
       totalLoansExpense: null,
       expensePieChartData: [],
-      yearlyExpenseSummary: null,
+      yearlyExpenseSummary: {
+        totalYearlyExpense: 0,
+        totalLoansExpense: 0,
+        expensePieChartData: [],
+        expenses: [],
+        categories: [],
+      },
       monthlyExpenseData: { categories: [], expenses: [] },
     });
-    // The useEffect in components will handle the data refresh with month/year
+    // Trigger data refresh after a small delay to ensure state is updated
+    setTimeout(() => get().triggerDataRefresh(), 100);
   },
   setSelectedMonth: (month) => {
     const m = Number(month);
@@ -106,29 +112,26 @@ const useExpenseStore = create((set, get) => ({
       localStorage.removeItem("isDateRangeActive");
       set({ fromDate: "", toDate: "", isDateRangeActive: false });
     }
-    // Clear data when switching modes and immediately fetch new data
+    // Clear data when switching modes
     if (Number(month) === 0) {
       set({
         monthlyExpense: 0,
         totalLoansExpense: null,
         expensePieChartData: [],
       });
-      // Fetch yearly data immediately
-      setTimeout(() => {
-        const { getYearlyExpenseSummary } = get();
-        getYearlyExpenseSummary(currentYear);
-      }, 0);
     } else {
-      set({ yearlyExpenseSummary: null });
-      // Fetch monthly data immediately
-      setTimeout(() => {
-        const { getExpensePieChartData, getMonthlyExpenseData, getMonthlyExpense, getTotalLoansExpense } = get();
-        getExpensePieChartData(m, currentYear);
-        getMonthlyExpenseData(m, currentYear);
-        getMonthlyExpense(m, currentYear);
-        getTotalLoansExpense(m, currentYear);
-      }, 0);
+      set({
+        yearlyExpenseSummary: {
+          totalYearlyExpense: 0,
+          totalLoansExpense: 0,
+          expensePieChartData: [],
+          expenses: [],
+          categories: [],
+        },
+      });
     }
+    // Trigger data refresh after a small delay to ensure state is updated
+    setTimeout(() => get().triggerDataRefresh(), 100);
   },
   setSelectedYear: (year) => {
     const y = Number(year);
@@ -142,18 +145,8 @@ const useExpenseStore = create((set, get) => ({
       localStorage.removeItem("isDateRangeActive");
       set({ fromDate: "", toDate: "", isDateRangeActive: false });
     }
-    // Immediately fetch data for new year
-    setTimeout(() => {
-      const { getExpensePieChartData, getMonthlyExpenseData, getYearlyExpenseSummary, getMonthlyExpense, getTotalLoansExpense } = get();
-      if (currentMonth === 0) {
-        getYearlyExpenseSummary(y);
-      } else {
-        getExpensePieChartData(currentMonth, y);
-        getMonthlyExpenseData(currentMonth, y);
-        getMonthlyExpense(currentMonth, y);
-        getTotalLoansExpense(currentMonth, y);
-      }
-    }, 0);
+    // Trigger data refresh after a small delay to ensure state is updated
+    setTimeout(() => get().triggerDataRefresh(), 100);
   },
   getMonthlyExpense: async (month, year) => {
     if (Number(month) === 0) return; // Don't fetch if 'All' selected
@@ -162,11 +155,11 @@ const useExpenseStore = create((set, get) => ({
       const response = await axiosInstance.get(`/expense/monthly-expense`, {
         params: { month, year },
       });
-      set({ monthlyExpense: response.data.monthlyExpense });
-      set({ loading: false });
+      console.log("Monthly expense response:", response.data);
+      set({ monthlyExpense: response.data.monthlyExpense || 0, loading: false });
     } catch (error) {
       console.error("Error fetching monthly expense:", error);
-      set({ loading: false });
+      set({ monthlyExpense: 0, loading: false });
       throw error;
     }
   },
@@ -177,11 +170,11 @@ const useExpenseStore = create((set, get) => ({
       const response = await axiosInstance.get(`/expense/loans-expense`, {
         params: { month, year },
       });
-      set({ totalLoansExpense: response.data.totalLoansExpense });
-      set({ loading: false });
+      console.log("Loans expense response:", response.data);
+      set({ totalLoansExpense: response.data.totalLoansExpense || 0, loading: false });
     } catch (error) {
       console.error("Error fetching loans totals:", error);
-      set({ loading: false });
+      set({ totalLoansExpense: 0, loading: false });
       throw error;
     }
   },
@@ -212,22 +205,61 @@ const useExpenseStore = create((set, get) => ({
   getYearlyExpenseSummary: async (year) => {
     set({ loading: true });
     try {
-      const response = await axiosInstance.get(`/expense/yearly-expense`, {
-        params: { year },
+      // First try to get summary data
+      const summaryResponse = await axiosInstance.get(`/expense/yearly-expense`, { 
+        params: { year } 
       });
+      
+      console.log("Yearly expense summary response:", summaryResponse.data);
+      
       // Format pie chart data for consistency
-      const pieChartData = response.data.expensePieChartData.map((item) => ({
+      const pieChartData = summaryResponse.data.expensePieChartData?.map((item) => ({
         x: item.category,
         y: Number(item.totalAmount),
         text: `${item.percentage} %`,
-      }));
+      })) || [];
+      
+      // Collect all expenses from monthly data for table
+      console.log("Collecting monthly data for yearly table...");
+      const allExpenses = [];
+      const allCategories = new Set();
+      
+      // Fetch data for all 12 months
+      for (let month = 1; month <= 12; month++) {
+        try {
+          const monthResponse = await axiosInstance.get(`/expense/monthly-expense-data`, {
+            params: { month, year }
+          });
+          if (monthResponse.data.expenses) {
+            allExpenses.push(...monthResponse.data.expenses);
+          }
+          if (monthResponse.data.categories) {
+            monthResponse.data.categories.forEach(cat => allCategories.add(cat));
+          }
+        } catch (monthError) {
+          console.log(`No data for month ${month}`);
+        }
+      }
+      
+      console.log(`Collected ${allExpenses.length} expenses from all months for table`);
+      
       set({
         yearlyExpenseSummary: {
-          totalYearlyExpense: response.data.totalYearlyExpense,
-          totalLoansExpense: response.data.totalLoansExpense,
+          totalYearlyExpense: summaryResponse.data.totalYearlyExpense,
+          totalLoansExpense: summaryResponse.data.totalLoansExpense,
           expensePieChartData: pieChartData,
+          expenses: allExpenses,
+          categories: Array.from(allCategories),
         },
         loading: false,
+      });
+      
+      console.log("Final yearly summary stored:", {
+        totalYearlyExpense: summaryResponse.data.totalYearlyExpense,
+        totalLoansExpense: summaryResponse.data.totalLoansExpense,
+        pieChartDataLength: pieChartData.length,
+        expensesCount: allExpenses.length,
+        categoriesCount: Array.from(allCategories).length,
       });
     } catch (error) {
       console.error("Error fetching yearly expense summary:", error);

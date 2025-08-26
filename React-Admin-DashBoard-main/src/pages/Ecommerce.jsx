@@ -58,6 +58,7 @@ const Ecommerce = () => {
     isDateRangeActive,
     getDateRangeExpense,
     getDateRangeLoansExpense,
+    dataRefreshTrigger,
   } = useExpenseStore();
 
   const {
@@ -71,27 +72,36 @@ const Ecommerce = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (isDateRangeActive && fromDate && toDate) {
-        // Use date range filter
-        await Promise.all([
-          getDateRangeExpense(fromDate, toDate),
-          getDateRangeLoansExpense(fromDate, toDate),
-          getDateRangeTotalSales(fromDate, toDate)
-        ]);
-      } else {
-        // Use month/year filter
-        if (selectedMonth === 0) {
+      console.log("Fetching data with:", { selectedMonth, selectedYear, isDateRangeActive, fromDate, toDate });
+      
+      try {
+        if (isDateRangeActive && fromDate && toDate) {
+          // Use date range filter
+          console.log("Using date range filter");
           await Promise.all([
-            getYearlyExpenseSummary(selectedYear),
-            getYearlySales(selectedYear)
+            getDateRangeExpense(fromDate, toDate),
+            getDateRangeLoansExpense(fromDate, toDate),
+            getDateRangeTotalSales(fromDate, toDate)
           ]);
         } else {
-          await Promise.all([
-            getMonthlyExpense(selectedMonth, selectedYear),
-            getTotalLoansExpense(selectedMonth, selectedYear),
-            getTotalSales(selectedMonth, selectedYear)
-          ]);
+          // Use month/year filter
+          if (selectedMonth === 0) {
+            console.log("Using yearly filter");
+            await Promise.all([
+              getYearlyExpenseSummary(selectedYear),
+              getYearlySales(selectedYear)
+            ]);
+          } else {
+            console.log("Using monthly filter");
+            await Promise.all([
+              getMonthlyExpense(selectedMonth, selectedYear),
+              getTotalLoansExpense(selectedMonth, selectedYear),
+              getTotalSales(selectedMonth, selectedYear)
+            ]);
+          }
         }
+      } catch (error) {
+        console.error("Error fetching data:", error);
       }
     };
     
@@ -102,6 +112,7 @@ const Ecommerce = () => {
     isDateRangeActive,
     fromDate,
     toDate,
+    dataRefreshTrigger, // Add this to trigger refresh when filters change
     getDateRangeExpense,
     getDateRangeLoansExpense,
     getDateRangeTotalSales,
@@ -113,16 +124,36 @@ const Ecommerce = () => {
   ]);
 
   // Use yearly or monthly data based on selection
-  const displayExpense =
-    selectedMonth === 0
+  const displayExpense = isDateRangeActive 
+    ? monthlyExpense // For date range, use monthlyExpense which gets set by getDateRangeExpense
+    : selectedMonth === 0
       ? yearlyExpenseSummary?.totalYearlyExpense
       : monthlyExpense;
-  const displayLoans =
-    selectedMonth === 0
+      
+  const displayLoans = isDateRangeActive
+    ? totalLoansExpense // For date range, use totalLoansExpense which gets set by getDateRangeLoansExpense
+    : selectedMonth === 0
       ? yearlyExpenseSummary?.totalLoansExpense
       : totalLoansExpense;
-  const displaySales = selectedMonth === 0 ? yearlyTotalSales : totalSales;
+      
+  const displaySales = isDateRangeActive
+    ? totalSales // For date range, use totalSales which gets set by getDateRangeTotalSales
+    : selectedMonth === 0 
+      ? yearlyTotalSales 
+      : totalSales;
 
+  console.log("Current state:", { 
+    selectedMonth, 
+    selectedYear, 
+    isDateRangeActive, 
+    fromDate, 
+    toDate,
+    monthlyExpense,
+    totalLoansExpense,
+    totalSales,
+    yearlyExpenseSummary,
+    yearlyTotalSales
+  });
   console.log("displayExpense", displayExpense);
   console.log("displayLoans", displayLoans);
   console.log("displaySales", displaySales);

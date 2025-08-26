@@ -3,8 +3,7 @@ import { useStateContext } from "../contexts/ContextProvider";
 import { FiPlus, FiEye } from "react-icons/fi";
 import useSalesStore from "../Store/SalesStore";
 import { AttachmentModal } from "../components";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+ 
 
 const DailySale = () => {
   const { currentColor, currentMode } = useStateContext();
@@ -19,6 +18,9 @@ const DailySale = () => {
   });
   const salesFileInputRef = useRef(null);
   const orderFileInputRef = useRef(null);
+
+  // Today's date in YYYY-MM-DD for max attribute of date inputs
+  const today = new Date().toISOString().split("T")[0];
 
   // Form states
   const [salesForm, setSalesForm] = useState({
@@ -135,7 +137,6 @@ const DailySale = () => {
         currentMode === "Dark" ? "bg-[#23272e]" : "bg-gray-100"
       }`}
     >
-      <ToastContainer position="top-center" autoClose={2000} />
       <div className="w-full max-w-6xl min-w-0">
         <div
           className={`bg-white dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl m-1 sm:m-2 md:m-3 p-2 sm:p-3 md:p-4 rounded-2xl w-full min-w-0 ${
@@ -624,18 +625,6 @@ const DailySale = () => {
         onClose={() => setAttachmentModal({ isOpen: false, fileUrl: "", fileName: "" })}
         fileUrl={attachmentModal.fileUrl}
         fileName={attachmentModal.fileName}
-      />
-
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
       />
     </div>
   );

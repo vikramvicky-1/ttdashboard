@@ -44,6 +44,12 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
     getExpenseCategories,
     categorySubMap,
     categories: storeCategories,
+    getExpensePieChartData,
+    isDateRangeActive,
+    fromDate,
+    toDate,
+    getDateRangePieChartData,
+    getDateRangeExpenseData,
   } = useExpenseStore();
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -388,6 +394,41 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
     document.body.removeChild(link);
   };
 
+  // Load data based on current filter mode
+  useEffect(() => {
+    const fetchData = async () => {
+      if (isDateRangeActive && fromDate && toDate) {
+        // Use date range filter
+        await Promise.all([
+          getDateRangePieChartData(fromDate, toDate),
+          getDateRangeExpenseData(fromDate, toDate)
+        ]);
+      } else {
+        // Use month/year filter
+        if (selectedMonth === 0) {
+          await getYearlyExpenseSummary(selectedYear);
+        } else {
+          await Promise.all([
+            getExpensePieChartData(selectedMonth, selectedYear),
+            getMonthlyExpenseData(selectedMonth, selectedYear)
+          ]);
+        }
+      }
+    };
+    
+    fetchData();
+  }, [
+    selectedMonth,
+    selectedYear,
+    isDateRangeActive,
+    fromDate,
+    toDate,
+    getDateRangePieChartData,
+    getDateRangeExpenseData,
+    getYearlyExpenseSummary,
+    getExpensePieChartData,
+    getMonthlyExpenseData
+  ]);
   return (
     <div
       className={`rounded-xl shadow p-2 md:p-4 mt-2 md:mt-4 w-full overflow-x-auto ${
@@ -579,17 +620,20 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
                     {exp.paymentMode || "-"}
                   </td>
                   <td className="border px-3 py-3 whitespace-nowrap text-base">
-                    {exp.attachment ? (
+                    {(exp.attachment || exp.fileUrl) ? (
                       <button
-                        className="text-blue-500 hover:text-blue-700"
+                        className="text-blue-500 hover:text-blue-700 flex items-center gap-1"
                         onClick={() => {
+                          const fileUrl = exp.attachment || exp.fileUrl;
+                          const fileName = exp.attachmentName || exp.fileName || fileUrl?.split('/').pop() || 'Attachment';
                           setAttachmentModal({
                             isOpen: true,
-                            fileUrl: exp.attachment,
-                            fileName: exp.attachmentName || 'Attachment'
+                            fileUrl: fileUrl,
+                            fileName: fileName
                           });
                         }}
                       >
+                        <FiEye size={16} />
                         View
                       </button>
                     ) : (
@@ -711,10 +755,15 @@ const Pie = () => {
     yearlyExpenseSummary,
     getMonthlyExpenseData,
     monthlyExpenseData,
+    getMonthlyExpense,
+    getTotalLoansExpense,
+    getDateRangeExpense,
+    getDateRangeLoansExpense,
     // Date range filter
     fromDate,
     toDate,
     isDateRangeActive,
+    dataRefreshTrigger,
     getDateRangePieChartData,
     getDateRangeExpenseData,
   } = useExpenseStore();
@@ -724,19 +773,25 @@ const Pie = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (isDateRangeActive && fromDate && toDate) {
-        // Use date range filter
+        // Use date range filter - call all APIs needed for dashboard cards
         await Promise.all([
           getDateRangePieChartData(fromDate, toDate),
-          getDateRangeExpenseData(fromDate, toDate)
+          getDateRangeExpenseData(fromDate, toDate),
+          getDateRangeExpense(fromDate, toDate),
+          getDateRangeLoansExpense(fromDate, toDate)
         ]);
       } else {
         // Use month/year filter
         if (selectedMonth === 0) {
+          // Get yearly data - don't call getExpensePieChartData for yearly view
           await getYearlyExpenseSummary(selectedYear);
         } else {
+          // Call all APIs needed for dashboard cards and pie chart
           await Promise.all([
             getExpensePieChartData(selectedMonth, selectedYear),
-            getMonthlyExpenseData(selectedMonth, selectedYear)
+            getMonthlyExpenseData(selectedMonth, selectedYear),
+            getMonthlyExpense(selectedMonth, selectedYear),
+            getTotalLoansExpense(selectedMonth, selectedYear)
           ]);
         }
       }
@@ -749,21 +804,30 @@ const Pie = () => {
     isDateRangeActive,
     fromDate,
     toDate,
+    dataRefreshTrigger,
     getDateRangePieChartData,
     getDateRangeExpenseData,
+    getDateRangeExpense,
+    getDateRangeLoansExpense,
     getYearlyExpenseSummary,
     getExpensePieChartData,
-    getMonthlyExpenseData
+    getMonthlyExpenseData,
+    getMonthlyExpense,
+    getTotalLoansExpense
   ]);
 
   // Use yearly or monthly data based on selection
   const chartData =
-    selectedMonth === 0
+    isDateRangeActive
+      ? expensePieChartData || []
+      : selectedMonth === 0
       ? yearlyExpenseSummary?.expensePieChartData || []
       : expensePieChartData;
   const total =
-    selectedMonth === 0
-      ? yearlyExpenseSummary?.totalYearlyExpense
+    isDateRangeActive
+      ? monthlyExpense
+      : selectedMonth === 0
+      ? yearlyExpenseSummary?.totalYearlyExpense || 0
       : monthlyExpense;
 
   return (
@@ -811,8 +875,20 @@ const Pie = () => {
       ) : (
         <div className="table-container">
           <Table
-            expenses={monthlyExpenseData.expenses || []}
-            categories={monthlyExpenseData.categories || []}
+            expenses={
+              isDateRangeActive
+                ? (monthlyExpenseData.expenses || [])
+                : (selectedMonth === 0
+                    ? (yearlyExpenseSummary?.expenses || [])
+                    : (monthlyExpenseData.expenses || []))
+            }
+            categories={
+              isDateRangeActive
+                ? (monthlyExpenseData.categories || [])
+                : (selectedMonth === 0
+                    ? (yearlyExpenseSummary?.categories || [])
+                    : (monthlyExpenseData.categories || []))
+            }
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
           />
@@ -881,6 +957,11 @@ const EditExpenseModal = ({ expense, onClose, onSave }) => {
   const [showPaymentMode, setShowPaymentMode] = useState(expense.paymentStatus === "Paid");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [attachmentModal, setAttachmentModal] = useState({
+    isOpen: false,
+    fileUrl: "",
+    fileName: ""
+  });
   const fileInputRef = useRef(null);
 
   React.useEffect(() => {
@@ -1107,16 +1188,24 @@ const EditExpenseModal = ({ expense, onClose, onSave }) => {
                 <p className="text-xs text-gray-500 mt-1">
                   Allowed: Images, PDFs, Word files. Max size: 10MB.
                 </p>
-                {expense.fileUrl && !form.file && (
-                  <div className="mt-2">
-                    <a
-                      href={expense.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 underline"
+                {(expense.attachment || expense.fileUrl) && !form.file && (
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const fileUrl = expense.attachment || expense.fileUrl;
+                        const fileName = expense.attachmentName || expense.fileName || fileUrl?.split('/').pop() || 'Current File';
+                        setAttachmentModal({
+                          isOpen: true,
+                          fileUrl: fileUrl,
+                          fileName: fileName
+                        });
+                      }}
+                      className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1"
                     >
-                      Current file: {expense.fileUrl.split("/").pop()}
-                    </a>
+                      <FiEye size={16} />
+                      View Current File
+                    </button>
                   </div>
                 )}
               </div>
@@ -1203,6 +1292,14 @@ const EditExpenseModal = ({ expense, onClose, onSave }) => {
           </form>
         </div>
       </div>
+      
+      {/* Attachment Modal */}
+      <AttachmentModal
+        isOpen={attachmentModal.isOpen}
+        onClose={() => setAttachmentModal({ isOpen: false, fileUrl: "", fileName: "" })}
+        fileUrl={attachmentModal.fileUrl}
+        fileName={attachmentModal.fileName}
+      />
     </div>
   );
 };
