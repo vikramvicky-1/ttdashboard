@@ -15,6 +15,8 @@ import {
   getDateRangeSalesPieChartData,
   getDateRangeSalesData,
 } from "../Controllers/salesController.js";
+import { getDailySalesData } from "../Controllers/dailySalesController.js";
+import { getYearlyCombinedSalesData } from "../Controllers/yearlySalesController.js";
 import multer from "multer";
 import path from "path";
 
@@ -73,5 +75,11 @@ router.get("/date-range-sales-data", getDateRangeSalesData);
 router.get("/monthly-sales-total", getMonthlySalesTotal);
 router.get("/yearly-sales-total", getYearlySalesTotal);
 router.get("/date-range-sales-total", getDateRangeSalesTotal);
+
+// Daily sales data route
+router.get("/daily-sales-data", getDailySalesData);
+
+// Yearly combined sales + orders route
+router.get("/yearly-combined-sales", getYearlyCombinedSalesData);
 
 export default router;

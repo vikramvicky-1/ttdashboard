@@ -31,6 +31,9 @@ const useSalesStore = create((set, get) => ({
   // Add sales and orders arrays for SalesData component
   sales: [],
   orders: [],
+  // Daily sales chart data
+  dailySalesData: [],
+  dailySalesTotal: 0,
 
 
   // Calculate combined totals for dashboard
@@ -532,18 +535,12 @@ const useSalesStore = create((set, get) => ({
     if (Number(month) === 0) return; // Don't fetch if 'All' selected
     set({ loading: true });
     try {
-      // Fetch monthly sales and orders, then combine
-      const [salesRes, ordersRes] = await Promise.all([
-        axiosInstance.get(`/sales/monthly-sales`, { params: { month, year } }),
-        axiosInstance.get(`/order/monthly-orders`, { params: { month, year } }),
-      ]);
-      console.log("Sales response:", salesRes.data);
-      console.log("Orders response:", ordersRes.data);
-      const monthlySalesTotal = salesRes.data?.monthlySales?.totalSales || 0;
-      const monthlyOrdersAmount =
-        ordersRes.data?.monthlyOrders?.totalAmount || 0;
-      const combinedTotal = Number(monthlySalesTotal) + Number(monthlyOrdersAmount);
-      console.log("Combined total sales:", combinedTotal);
+      // Use the same endpoint as daily sales graph to ensure consistency
+      const response = await axiosInstance.get(`/sales/daily-sales-data`, {
+        params: { month, year },
+      });
+      const combinedTotal = response.data.totalMonthlySales || 0;
+      console.log("Total sales from daily-sales-data:", combinedTotal);
       set({
         totalSales: combinedTotal,
         loading: false,
@@ -558,17 +555,11 @@ const useSalesStore = create((set, get) => ({
   getYearlySales: async (year) => {
     set({ loading: true });
     try {
-      // Fetch yearly sales and yearly orders, then combine
-      const [salesRes, ordersRes] = await Promise.all([
-        axiosInstance.get(`/sales/yearly-sales`, { params: { year } }),
-        axiosInstance.get(`/order/yearly-orders`, { params: { year } }),
-      ]);
-      console.log("Yearly sales response:", salesRes.data);
-      console.log("Yearly orders response:", ordersRes.data);
-      const yearlySalesTotal = salesRes.data?.totalYearlySales || 0;
-      const yearlyOrdersTotal =
-        ordersRes.data?.totalYearlyOrdersAmount || 0;
-      const combinedYearlyTotal = Number(yearlySalesTotal) + Number(yearlyOrdersTotal);
+      // Use the new unified endpoint for consistent calculation
+      const response = await axiosInstance.get(`/sales/yearly-combined-sales`, {
+        params: { year },
+      });
+      const combinedYearlyTotal = response.data.totalYearlySales || 0;
       console.log("Combined yearly total sales:", combinedYearlyTotal);
       set({
         yearlyTotalSales: combinedYearlyTotal,
@@ -607,6 +598,30 @@ const useSalesStore = create((set, get) => ({
     } catch (error) {
       console.error("Error fetching date range total sales:", error);
       set({ totalSales: 0, loading: false });
+      throw error;
+    }
+  },
+
+  // Get daily sales data for chart
+  getDailySalesData: async (month, year) => {
+    if (Number(month) === 0) {
+      set({ dailySalesData: [], dailySalesTotal: 0 });
+      return;
+    }
+    set({ loading: true });
+    try {
+      const response = await axiosInstance.get(`/sales/daily-sales-data`, {
+        params: { month, year },
+      });
+      set({
+        dailySalesData: response.data.dailySales || [],
+        dailySalesTotal: response.data.totalMonthlySales || 0,
+        loading: false,
+      });
+      console.log("Daily sales data:", response.data);
+    } catch (error) {
+      console.error("Error fetching daily sales data:", error);
+      set({ dailySalesData: [], dailySalesTotal: 0, loading: false });
       throw error;
     }
   },

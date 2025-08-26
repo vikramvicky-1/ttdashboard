@@ -5,6 +5,7 @@ import { Button } from ".";
 import { MdOutlineCancel } from "react-icons/md";
 import { FiSettings } from "react-icons/fi";
 import { BiCategory } from "react-icons/bi";
+import { FiUsers } from "react-icons/fi";
 import avatar from "../data/avatar.jpg";
 import Settings from "./Settings";
 
@@ -120,14 +121,48 @@ const UserProfile = () => {
             </button>
           </div>
 
+          {/* Manage Users Button */}
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsClicked({ ...isClicked, userProfile: false });
+                navigate('/manage-users');
+              }}
+              className="flex gap-3 sm:gap-5 items-center w-full p-3 sm:p-4 hover:bg-light-gray cursor-pointer dark:hover:bg-[#42464D] rounded-lg transition-colors duration-200 z-10 relative bg-transparent border-none outline-none"
+            >
+              <div
+                style={{ color: "#4CAF50", backgroundColor: "#E8F5E8" }}
+                className="text-lg sm:text-xl rounded-lg p-2 sm:p-3 hover:bg-ligth-gray flex-shrink-0"
+              >
+                <FiUsers />
+              </div>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="font-semibold dark:text-gray-200 text-sm sm:text-base">
+                  Manage Users
+                </p>
+                <p className="text-gray-500 text-xs sm:text-sm dark:text-gray-400">
+                  Add & Edit System Users
+                </p>
+              </div>
+            </button>
+          </div>
+
           <div className="mt-4 sm:mt-5">
-            <Button
-              color="white"
-              bgColor={currentColor}
-              text="Logout"
-              borderRadius="10px"
-              width="full"
-            />
+            <button
+              className="w-full px-4 py-2 text-white font-medium rounded-lg bg-[#03C9D7] hover:bg-[#03C9D7]/90 transition-colors duration-200"
+              style={{ backgroundColor: currentColor }}
+              onMouseEnter={(e) => {
+                e.target.style.opacity = '0.9';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.opacity = '1';
+              }}
+            >
+              Logout
+            </button>
           </div>
         </>
       ) : (

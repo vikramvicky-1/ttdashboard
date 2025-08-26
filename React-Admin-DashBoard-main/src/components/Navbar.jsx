@@ -6,6 +6,7 @@ import { RiNotification3Line } from "react-icons/ri";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import { TooltipComponent } from "@syncfusion/ej2-react-popups";
 import { useStateContext } from "../contexts/ContextProvider";
+import { useLocation } from "react-router-dom";
 import avatar from "../data/avatar.jpg";
 import { UserProfile, DateRangeFilter } from ".";
 import useExpenseStore from "../Store/ExpenseStore";
@@ -69,7 +70,11 @@ const Navbar = () => {
     setSelectedYear,
     isDateRangeActive,
   } = useExpenseStore();
+  const location = useLocation();
   const profileRef = useRef(null);
+
+  // Check if we're on management pages where date filters should be hidden
+  const isManagementPage = location.pathname === '/manage-categories' || location.pathname === '/manage-users';
   useEffect(() => {
     const handleResize = () => setScreenSize(window.innerWidth);
 
@@ -166,49 +171,54 @@ const Navbar = () => {
 
         {/* Main content section */}
         <div className="navbar-left-section flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-4 flex-1 min-w-0 px-1 sm:px-0 justify-between sm:justify-start">
-          {/* Month/Year Dropdowns - Hidden when date range is active */}
-          {!isDateRangeActive && (
-            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className={`px-2 sm:px-3 py-1 rounded border text-xs sm:text-sm ${
-                  currentMode === "Dark"
-                    ? "bg-[#23272e] text-gray-100 border-gray-600"
-                    : "bg-white text-gray-900 border-gray-300"
-                }`}
-              >
-                {months.map((month, index) => (
-                  <option key={index} value={index}>
-                    {month}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className={`px-2 sm:px-3 py-1 rounded border text-xs sm:text-sm ${
-                  currentMode === "Dark"
-                    ? "bg-[#23272e] text-gray-100 border-gray-600"
-                    : "bg-white text-gray-900 border-gray-300"
-                }`}
-              >
-                {years.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Hide date filters on management pages */}
+          {!isManagementPage && (
+            <>
+              {/* Month/Year Dropdowns - Hidden when date range is active */}
+              {!isDateRangeActive && (
+                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    className={`px-2 sm:px-3 py-1 rounded border text-xs sm:text-sm ${
+                      currentMode === "Dark"
+                        ? "bg-[#23272e] text-gray-100 border-gray-600"
+                        : "bg-white text-gray-900 border-gray-300"
+                    }`}
+                  >
+                    {months.map((month, index) => (
+                      <option key={index} value={index}>
+                        {month}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className={`px-2 sm:px-3 py-1 rounded border text-xs sm:text-sm ${
+                      currentMode === "Dark"
+                        ? "bg-[#23272e] text-gray-100 border-gray-600"
+                        : "bg-white text-gray-900 border-gray-300"
+                    }`}
+                  >
+                    {years.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-          {/* Date Range Filter - Same row on mobile */}
-          <div className="flex flex-row items-center gap-1 sm:gap-2 date-inputs-mobile flex-shrink-0">
-            <div className="text-xs text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
-              Date Range:
-            </div>
-            <DateRangeFilter isNavbar={true} />
-          </div>
+              {/* Date Range Filter - Same row on mobile */}
+              <div className="flex flex-row items-center gap-1 sm:gap-2 date-inputs-mobile flex-shrink-0">
+                <div className="text-xs text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
+                  Date Range:
+                </div>
+                <DateRangeFilter isNavbar={true} />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Desktop Profile section - Right side */}

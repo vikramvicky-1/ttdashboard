@@ -350,6 +350,8 @@ export const updateSales = async (req, res) => {
       updateData.cashTransferred = Number(updateData.cashTransferred);
     if (updateData.closingCash !== undefined)
       updateData.closingCash = Number(updateData.closingCash);
+    if (updateData.totalSales !== undefined)
+      updateData.totalSales = Number(updateData.totalSales);
     if (updateData.date !== undefined)
       updateData.date = new Date(updateData.date);
     // Remove fileUrl if not present in update

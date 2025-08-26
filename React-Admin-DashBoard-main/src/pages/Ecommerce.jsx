@@ -41,7 +41,6 @@ const DropDown = ({ currentMode }) => (
 
 const Ecommerce = () => {
   const { currentColor, currentMode } = useStateContext();
-  const [inHand, setInHand] = useState("10000.00");
   const {
     selectedMonth,
     selectedYear,
@@ -68,6 +67,9 @@ const Ecommerce = () => {
     getYearlySales,
     yearlyTotalSales,
     getDateRangeTotalSales,
+    getDailySalesData,
+    dailySalesData,
+    dailySalesTotal,
   } = useSalesStore();
 
   useEffect(() => {
@@ -96,7 +98,8 @@ const Ecommerce = () => {
             await Promise.all([
               getMonthlyExpense(selectedMonth, selectedYear),
               getTotalLoansExpense(selectedMonth, selectedYear),
-              getTotalSales(selectedMonth, selectedYear)
+              getTotalSales(selectedMonth, selectedYear),
+              getDailySalesData(selectedMonth, selectedYear)
             ]);
           }
         }
@@ -120,7 +123,8 @@ const Ecommerce = () => {
     getYearlySales,
     getMonthlyExpense,
     getTotalLoansExpense,
-    getTotalSales
+    getTotalSales,
+    getDailySalesData
   ]);
 
   // Use yearly or monthly data based on selection
@@ -158,6 +162,18 @@ const Ecommerce = () => {
   console.log("displayLoans", displayLoans);
   console.log("displaySales", displaySales);
 
+  // Calculate In Hand Cash: (Sales + Loans) - Expenses
+  const calculateInHandCash = () => {
+    const sales = Number(displaySales) || 0;
+    const loans = Number(displayLoans) || 0;
+    const expenses = Number(displayExpense) || 0;
+    
+    const inHandAmount = (sales + loans) - expenses;
+    return inHandAmount;
+  };
+
+  const inHandCash = calculateInHandCash();
+
   return (
     <div className="main-content-mobile">
       {(expenseLoading || salesLoading) && (
@@ -174,14 +190,14 @@ const Ecommerce = () => {
                 <p className="font-bold text-black text-xl">In Hand</p>
                 <p
                   className={`text-2xl mt-10 ${
-                    inHand <= 0
+                    inHandCash <= 0
                       ? "text-red-500"
-                      : inHand > 0 && inHand <= 50000
+                      : inHandCash > 0 && inHandCash <= 50000
                       ? "text-yellow-500"
                       : "text-green-500"
                   }`}
                 >
-                  ₹{inHand}
+                  ₹{inHandCash.toLocaleString("en-IN")}
                 </p>
               </div>
               <button
@@ -234,50 +250,96 @@ const Ecommerce = () => {
         </div>
       </div>
 
-      <div className="flex gap-6 sm:gap-10 flex-col items-center justify-center mt-6">
-        <div className="bg-white dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl m-2 sm:m-3 p-3 sm:p-4 rounded-2xl w-full max-w-6xl">
-          <div className="m-2 p-2 pb-4 md:p-6 lg:p-10 md:m-6 lg:m-10 mt-6 sm:mt-8 md:mt-12 lg:mt-16 md:rounded-3xl dark:bg-secondary-dark-bg rounded-xl bg-gray-200 w-full">
-            <ChartsHeader category="Sale Report" title="DAILY SALE" />
-            <div className="w-full overflow-x-auto scrollbar-hide">
-              <div style={{ minWidth: 900, height: "350px" }}>
-                <ChartComponent
-                  id="Charts"
-                  primaryXAxis={ColorMappingPrimaryXAxis}
-                  primaryYAxis={ColorMappingPrimaryYAxis}
-                  chartArea={{ border: { width: 0 } }}
-                  background={currentMode === "Dark" ? "#33373E" : "#fff"}
-                  legendSettings={{ visible: false }}
-                  tooltip={{
-                    enable: true,
-                  }}
-                >
-                  <Inject
-                    services={[ColumnSeries, Tooltip, Legend, Category]}
-                  />
-                  <SeriesCollectionDirective>
-                    <SeriesDirective
-                      dataSource={colorMappingData[0]}
-                      name="SALE"
-                      xName="x"
-                      yName="y"
-                      type="Column"
-                      cornerRadius={{
-                        topLeft: 10,
-                        topRight: 10,
-                      }}
+      {/* Show chart only when a specific month is selected (not 'All' and not date range) */}
+      {selectedMonth !== 0 && !isDateRangeActive && (
+        <div className="flex gap-6 sm:gap-10 flex-col items-center justify-center mt-6">
+          <div className="bg-white dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl m-2 sm:m-3 p-3 sm:p-4 rounded-2xl w-full max-w-6xl">
+            <div className="m-2 p-2 pb-4 md:p-6 lg:p-10 md:m-6 lg:m-10 mt-6 sm:mt-8 md:mt-12 lg:mt-16 md:rounded-3xl dark:bg-secondary-dark-bg rounded-xl bg-gray-200 w-full">
+              <ChartsHeader 
+                category="Sale Report" 
+                title={`DAILY SALES & ORDERS - Total: ₹${dailySalesTotal ? Number(dailySalesTotal).toLocaleString("en-IN") : "0"}`} 
+              />
+              <div className="w-full">
+                <div style={{ width: "100%", height: "400px" }}>
+                  <ChartComponent
+                    id="DailySalesChart"
+                    primaryXAxis={{
+                      valueType: "Category",
+                      majorGridLines: { width: 0 },
+                      title: "Day of Month",
+                      titleStyle: {
+                        color: currentMode === "Dark" ? "#FFFFFF" : "#000000",
+                        size: "16px",
+                        fontWeight: "500",
+                      },
+                      labelStyle: {
+                        color: currentMode === "Dark" ? "#FFFFFF" : "#000000",
+                        size: "12px",
+                        fontWeight: "500",
+                      },
+                      labelIntersectAction: "Rotate45",
+                    }}
+                    primaryYAxis={{
+                      lineStyle: { width: 0 },
+                      majorTickLines: { width: 0 },
+                      minorTickLines: { width: 0 },
+                      labelFormat: "₹ {value}",
+                      title: "Sales + Orders Amount",
+                      titleStyle: {
+                        color: currentMode === "Dark" ? "#FFFFFF" : "#000000",
+                        size: "16px",
+                        fontWeight: "500",
+                      },
+                      labelStyle: {
+                        color: currentMode === "Dark" ? "#FFFFFF" : "#000000",
+                      },
+                    }}
+                    chartArea={{ border: { width: 0 } }}
+                    background={currentMode === "Dark" ? "#33373E" : "#fff"}
+                    legendSettings={{ visible: false }}
+                    tooltip={{
+                      enable: true,
+                      format: "Day ${point.x}: ${point.y}<br/>",
+                    }}    
+                    pointRender={(args) => {
+                      const value = args.point.y;
+                      if (value < 5000) {
+                        args.fill = '#FF6B6B'; // Red
+                      } else if (value >= 5000 && value <= 10000) {
+                        args.fill = '#FFD93D'; // Yellow
+                      } else {
+                        args.fill = '#6BCF7F'; // Green
+                      }
+                    }}
+                    zoomSettings={{
+                      enableSelectionZooming: true,
+                      enableScrollbar: true,
+                    }}
+                  >
+                    <Inject
+                      services={[ColumnSeries, Tooltip, Legend, Category]}
                     />
-                  </SeriesCollectionDirective>
-                  <RangeColorSettingsDirective>
-                    {rangeColorMapping.map((item, index) => (
-                      <RangeColorSettingDirective key={index} {...item} />
-                    ))}
-                  </RangeColorSettingsDirective>
-                </ChartComponent>
+                    <SeriesCollectionDirective>
+                      <SeriesDirective
+                        dataSource={dailySalesData}
+                        name="Daily Sales + Orders"
+                        xName="x"
+                        yName="y"
+                        type="Column"
+                        fill="#6BCF7F"
+                        cornerRadius={{
+                          topLeft: 4,
+                          topRight: 4,
+                        }}
+                      />
+                    </SeriesCollectionDirective>
+                  </ChartComponent>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

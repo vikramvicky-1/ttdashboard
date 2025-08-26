@@ -18,6 +18,18 @@ const EditSalesModal = ({ sale, onClose, onSave }) => {
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
 
+  // Auto-calculate totalSales when form values change
+  useEffect(() => {
+    const openingCash = Number(form.openingCash) || 0;
+    const purchaseCash = Number(form.purchaseCash) || 0;
+    const onlineCash = Number(form.onlineCash) || 0;
+    const physicalCash = Number(form.physicalCash) || 0;
+
+    const total = physicalCash + onlineCash + purchaseCash - openingCash;
+
+    setForm(prev => ({ ...prev, totalSales: total }));
+  }, [form.openingCash, form.purchaseCash, form.onlineCash, form.physicalCash]);
+
   const today = new Date().toISOString().split("T")[0];
 
   const handleChange = (e) => {
@@ -191,6 +203,26 @@ const EditSalesModal = ({ sale, onClose, onSave }) => {
                   step="0.01"
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="editTotalSales"
+                  className="block mb-1 font-medium"
+                >
+                  Total Sales <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  id="editTotalSales"
+                  name="totalSales"
+                  value={form.totalSales || 0}
+                  onChange={handleChange}
+                  min="0"
+                  step="0.01"
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-gray-100 dark:bg-gray-600"
                 />
               </div>
 
