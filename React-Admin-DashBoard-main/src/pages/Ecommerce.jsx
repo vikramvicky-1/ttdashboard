@@ -259,8 +259,41 @@ const Ecommerce = () => {
                 category="Sale Report" 
                 title={`DAILY SALES & ORDERS - Total: ₹${dailySalesTotal ? Number(dailySalesTotal).toLocaleString("en-IN") : "0"}`} 
               />
-              <div className="w-full">
-                <div style={{ width: "100%", height: "400px" }}>
+              <div 
+                className="w-full chart-container" 
+                style={{ 
+                  scrollbarWidth: "none", 
+                  msOverflowStyle: "none",
+                  WebkitOverflowScrolling: "touch"
+                }}
+              >
+                <style jsx>{`
+                  .chart-container::-webkit-scrollbar {
+                    display: none;
+                  }
+                  
+                  /* Desktop - no scroll, fit to container */
+                  @media (min-width: 1024px) {
+                    .chart-container {
+                      overflow-x: visible;
+                    }
+                    .chart-inner {
+                      width: 100% !important;
+                      min-width: auto !important;
+                    }
+                  }
+                  
+                  /* Mobile/Tablet - enable horizontal scroll */
+                  @media (max-width: 1023px) {
+                    .chart-container {
+                      overflow-x: auto;
+                    }
+                    .chart-inner {
+                      min-width: 1200px !important;
+                    }
+                  }
+                `}</style>
+                <div className="chart-inner" style={{ width: "100%", height: "400px" }}>
                   <ChartComponent
                     id="DailySalesChart"
                     primaryXAxis={{
@@ -274,10 +307,15 @@ const Ecommerce = () => {
                       },
                       labelStyle: {
                         color: currentMode === "Dark" ? "#FFFFFF" : "#000000",
-                        size: "12px",
+                        size: "11px",
                         fontWeight: "500",
                       },
-                      labelIntersectAction: "Rotate45",
+                      labelIntersectAction: "None",
+                      interval: 1,
+                      edgeLabelPlacement: "Shift",
+                      labelPlacement: "OnTicks",
+                      tickPosition: "Outside",
+                      majorTickLines: { width: 1, height: 5 },
                     }}
                     primaryYAxis={{
                       lineStyle: { width: 0 },
@@ -299,8 +337,10 @@ const Ecommerce = () => {
                     legendSettings={{ visible: false }}
                     tooltip={{
                       enable: true,
-                      format: "Day ${point.x}: ${point.y}<br/>",
-                    }}    
+                      format: "Day ${point.x}: ₹${point.y}<br/>",
+                    }}
+                    width="100%"
+                    height="400px"    
                     pointRender={(args) => {
                       const value = args.point.y;
                       if (value < 5000) {

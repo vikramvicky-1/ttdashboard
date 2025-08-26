@@ -613,12 +613,28 @@ const useSalesStore = create((set, get) => ({
       const response = await axiosInstance.get(`/sales/daily-sales-data`, {
         params: { month, year },
       });
+      
+      // Process data to ensure all days are included with proper labels
+      const dailySales = response.data.dailySales || [];
+      const daysInMonth = new Date(year, month, 0).getDate();
+      
+      // Create array with all days (1 to daysInMonth)
+      const completeData = [];
+      for (let day = 1; day <= daysInMonth; day++) {
+        const existingData = dailySales.find(item => item.x === day || item.x === day.toString());
+        completeData.push({
+          x: day.toString(),
+          y: existingData ? existingData.y : 0
+        });
+      }
+      
       set({
-        dailySalesData: response.data.dailySales || [],
+        dailySalesData: completeData,
         dailySalesTotal: response.data.totalMonthlySales || 0,
         loading: false,
       });
       console.log("Daily sales data:", response.data);
+      console.log("Processed complete data:", completeData);
     } catch (error) {
       console.error("Error fetching daily sales data:", error);
       set({ dailySalesData: [], dailySalesTotal: 0, loading: false });
