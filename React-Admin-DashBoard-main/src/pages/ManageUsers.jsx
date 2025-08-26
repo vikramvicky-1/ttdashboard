@@ -5,6 +5,9 @@ import axiosInstance from "../Library/Axios";
 import { toast } from "react-toastify";
 import { ConfirmationModal } from "../components";
 
+// Get backend URL from environment variables
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://ttdashboard04.onrender.com";
+
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -155,7 +158,7 @@ const ManageUsers = () => {
     if (user.profilePicture) {
       const imageUrl = user.profilePicture.startsWith('http') 
         ? user.profilePicture 
-        : `${process.env.REACT_APP_BACKEND_URL}/uploads/${user.profilePicture}`;
+        : `${BACKEND_URL}/uploads/${user.profilePicture}`;
       setPreviewImage(imageUrl);
     } else {
       setPreviewImage(null);
@@ -454,7 +457,7 @@ const ManageUsers = () => {
                             <>
                               <img
                                 className="h-10 w-10 rounded-full object-cover"
-                                src={`${process.env.REACT_APP_BACKEND_URL}/uploads/${user.profilePicture}`}
+                                src={`${BACKEND_URL}/uploads/${user.profilePicture}`}
                                 alt={user.name}
                                 onError={(e) => {
                                   console.log('Image failed to load:', e.target.src);
