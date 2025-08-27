@@ -1,9 +1,9 @@
 import express from "express";
-import expenseRoutes from "./routes/expenseRoutes.js";
-import salesRoutes from "./routes/salesRoutes.js";
-import orderRoutes from "./routes/orderRoutes.js";
-import categoryRoutes from "./routes/categoryRoutes.js";
-import userRoutes from "./routes/userRoutes.js";
+import expenseRoutes from "./Routes/expenseRoutes.js";
+import salesRoutes from "./Routes/salesRoutes.js";
+import orderRoutes from "./Routes/orderRoutes.js";
+import categoryRoutes from "./Routes/categoryRoutes.js";
+import userRoutes from "./Routes/userRoutes.js";
 import cors from "cors";
 import path from "path";
 
