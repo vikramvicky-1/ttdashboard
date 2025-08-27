@@ -1,9 +1,10 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-// baseURL: "https://ttdashboard04.onrender.com/api",
-baseURL: process.env.REACT_APP_API_URL || "https://ttdashboard04.onrender.com/api",
+  // Development URL - change to production URL when deploying
+//   baseURL: "http://localhost:5000/api",
+  baseURL: "https://ttdashboard04.onrender.com/api",
+  // Production URL: "https://ttdashboard04.onrender.com/api"
 });
 
 export default axiosInstance;
-//baseURL: "https://ttdashboard04.onrender.com/api",
