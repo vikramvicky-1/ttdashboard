@@ -1,7 +1,9 @@
 import React, { useEffect } from "react";
-import { Navbar, Sidebar } from "./components";
+import { Navbar, Sidebar, Footer, ThemeSettings, ProtectedRoute, RoleProtectedRoute } from "./components";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useStateContext } from "./contexts/ContextProvider";
+import { AuthProvider } from "./contexts/AuthContext";
+import { RoleProvider } from "./contexts/RoleContext";
 import {
   Ecommerce,
   Pie,
@@ -14,6 +16,8 @@ import {
 } from "./pages";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { FiSettings } from "react-icons/fi";
+import { TooltipComponent } from "@syncfusion/ej2-react-popups";
 
 export const App = () => {
   const {
@@ -36,146 +40,195 @@ export const App = () => {
   return (
     <div className={currentMode === "Dark" ? "dark" : ""}>
       <BrowserRouter>
-        <Routes>
-          {/* Login Page - Main Landing */}
-          <Route path="/" element={<Login />} />
-          <Route path="/login" element={<Login />} />
+        <AuthProvider>
+          <RoleProvider>
+            <Routes>
+            {/* Login Page - Main Landing */}
+            <Route path="/login" element={<Login />} />
 
-          {/* Dashboard Routes - Protected */}
-          <Route
-            path="/dashboard"
-            element={
-              <div className="flex relative dark:bg-main-dark-bg">
-                <Sidebar />
-                <div
-                  className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
-                    activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
-                  }`}
-                >
-                  <Navbar />
-                  <div className="pt-0">
-                    <Ecommerce />
+            {/* Dashboard Routes - Protected */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <div className="flex relative dark:bg-main-dark-bg">
+                    <Sidebar />
+                    <div
+                      className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
+                        activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
+                      }`}
+                    >
+                      <Navbar />
+                      <div className="pt-0">
+                        <Ecommerce />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            }
-          />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <div className="flex relative dark:bg-main-dark-bg">
+                    <Sidebar />
+                    <div
+                      className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
+                        activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
+                      }`}
+                    >
+                      <Navbar />
+                      <div className="pt-0">
+                        <Ecommerce />
+                      </div>
+                    </div>
+                  </div>
+                </ProtectedRoute>
+              }
+            />
 
           {/* Other Dashboard Routes */}
           <Route
             path="/expenses"
             element={
-              <div className="flex relative dark:bg-main-dark-bg">
-                <Sidebar />
-                <div
-                  className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
-                    activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
-                  }`}
-                >
-                  <Navbar />
-                  <div className="pt-0">
-                    <Pie />
+              <ProtectedRoute>
+                <RoleProtectedRoute requiredPermission="canViewExpenseData">
+                  <div className="flex relative dark:bg-main-dark-bg">
+                    <Sidebar />
+                    <div
+                      className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
+                        activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
+                      }`}
+                    >
+                      <Navbar />
+                      <div className="pt-0">
+                        <Pie />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </RoleProtectedRoute>
+              </ProtectedRoute>
             }
           />
 
           <Route
             path="/add-expense"
             element={
-              <div className="flex relative dark:bg-main-dark-bg">
-                <Sidebar />
-                <div
-                  className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
-                    activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
-                  }`}
-                >
-                  <Navbar />
-                  <div className="pt-0">
-                    <AddExpense />
+              <ProtectedRoute>
+                <RoleProtectedRoute requiredPermission="canAddExpense">
+                  <div className="flex relative dark:bg-main-dark-bg">
+                    <Sidebar />
+                    <div
+                      className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
+                        activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
+                      }`}
+                    >
+                      <Navbar />
+                      <div className="pt-0">
+                        <AddExpense />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </RoleProtectedRoute>
+              </ProtectedRoute>
             }
           />
 
           <Route
             path="/daily-sale"
             element={
-              <div className="flex relative dark:bg-main-dark-bg">
-                <Sidebar />
-                <div
-                  className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
-                    activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
-                  }`}
-                >
-                  <Navbar />
-                  <div className="pt-0">
-                    <DailySale />
+              <ProtectedRoute>
+                <RoleProtectedRoute requiredPermission="canAddSale">
+                  <div className="flex relative dark:bg-main-dark-bg">
+                    <Sidebar />
+                    <div
+                      className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
+                        activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
+                      }`}
+                    >
+                      <Navbar />
+                      <div className="pt-0">
+                        <DailySale />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </RoleProtectedRoute>
+              </ProtectedRoute>
             }
           />
 
           <Route
             path="/sales-data"
             element={
-              <div className="flex relative dark:bg-main-dark-bg">
-                <Sidebar />
-                <div
-                  className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
-                    activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
-                  }`}
-                >
-                  <Navbar />
-                  <div className="pt-0">
-                    <SalesData />
+              <ProtectedRoute>
+                <RoleProtectedRoute requiredPermission="canViewSalesData">
+                  <div className="flex relative dark:bg-main-dark-bg">
+                    <Sidebar />
+                    <div
+                      className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
+                        activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
+                      }`}
+                    >
+                      <Navbar />
+                      <div className="pt-0">
+                        <SalesData />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </RoleProtectedRoute>
+              </ProtectedRoute>
             }
           />
 
           <Route
             path="/manage-categories"
             element={
-              <div className="flex relative dark:bg-main-dark-bg">
-                <Sidebar />
-                <div
-                  className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
-                    activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
-                  }`}
-                >
-                  <Navbar />
-                  <div className="pt-0">
-                    <ManageCategories />
+              <ProtectedRoute>
+                <RoleProtectedRoute requiredPermission="canManageCategories">
+                  <div className="flex relative dark:bg-main-dark-bg">
+                    <Sidebar />
+                    <div
+                      className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
+                        activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
+                      }`}
+                    >
+                      <Navbar />
+                      <div className="pt-0">
+                        <ManageCategories />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </RoleProtectedRoute>
+              </ProtectedRoute>
             }
           />
 
           <Route
             path="/manage-users"
             element={
-              <div className="flex relative dark:bg-main-dark-bg">
-                <Sidebar />
-                <div
-                  className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
-                    activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
-                  }`}
-                >
-                  <Navbar />
-                  <div className="pt-0">
-                    <ManageUsers />
+              <ProtectedRoute>
+                <RoleProtectedRoute requiredPermission="canManageUsers">
+                  <div className="flex relative dark:bg-main-dark-bg">
+                    <Sidebar />
+                    <div
+                      className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
+                        activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
+                      }`}
+                    >
+                      <Navbar />
+                      <div className="pt-0">
+                        <ManageUsers />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </RoleProtectedRoute>
+              </ProtectedRoute>
             }
           />
-        </Routes>
+          </Routes>
+          </RoleProvider>
+        </AuthProvider>
       </BrowserRouter>
 
       {/* Toast Notifications */}

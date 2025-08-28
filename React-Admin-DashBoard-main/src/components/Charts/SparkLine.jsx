@@ -58,7 +58,6 @@ const SparkLine = ({ id, height, width, color, data, type, currentColor }) => {
       </SparklineComponent>
     );
   } catch (error) {
-    console.error("SparkLine component error:", error);
     return (
       <div
         style={{

@@ -14,6 +14,8 @@ import {
   getDateRangePieChartData,
   getDateRangeExpenseData,
 } from "../Controllers/expenseController.js";
+import { requireAccountantOrAdmin, requireAdmin } from "../MIddlewares/roleMiddleware.js";
+import { authenticateToken } from "../MIddlewares/authMiddleware.js";
 import multer from "multer";
 import path from "path";
 
@@ -54,20 +56,20 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
-router.post("/add-expense", upload.single("file"), createExpense);
-router.get("/monthly-expense", getMonthlyExpense);
-router.get("/loans-expense", getLoansAndInterestsMonthlyTotals);
-router.get("/expense-pie-chart-data", getExpensePieChartData);
-router.get("/yearly-expense", getYearlyExpenseSummary);
-router.get("/monthly-expense-data", getMonthlyExpenseData);
-router.get("/categories", getExpenseCategories);
-router.delete("/delete-expense/:id", deleteExpense);
-router.put("/update-expense/:id", upload.single("file"), updateExpense);
+router.post("/add-expense", authenticateToken, requireAccountantOrAdmin, upload.single("file"), createExpense);
+router.get("/monthly-expense", authenticateToken, requireAccountantOrAdmin, getMonthlyExpense);
+router.get("/loans-expense", authenticateToken, requireAccountantOrAdmin, getLoansAndInterestsMonthlyTotals);
+router.get("/expense-pie-chart-data", authenticateToken, requireAccountantOrAdmin, getExpensePieChartData);
+router.get("/yearly-expense", authenticateToken, requireAccountantOrAdmin, getYearlyExpenseSummary);
+router.get("/monthly-expense-data", authenticateToken, requireAccountantOrAdmin, getMonthlyExpenseData);
+router.get("/categories", authenticateToken, requireAccountantOrAdmin, getExpenseCategories);
+router.delete("/delete-expense/:id", authenticateToken, requireAdmin, deleteExpense);
+router.put("/update-expense/:id", authenticateToken, requireAdmin, upload.single("file"), updateExpense);
 
 // Date range filter routes
-router.get("/date-range-expense", getDateRangeExpense);
-router.get("/date-range-loans-expense", getDateRangeLoansExpense);
-router.get("/date-range-pie-chart-data", getDateRangePieChartData);
-router.get("/date-range-expense-data", getDateRangeExpenseData);
+router.get("/date-range-expense", authenticateToken, requireAccountantOrAdmin, getDateRangeExpense);
+router.get("/date-range-loans-expense", authenticateToken, requireAccountantOrAdmin, getDateRangeLoansExpense);
+router.get("/date-range-pie-chart-data", authenticateToken, requireAccountantOrAdmin, getDateRangePieChartData);
+router.get("/date-range-expense-data", authenticateToken, requireAccountantOrAdmin, getDateRangeExpenseData);
 
 export default router;

@@ -7,7 +7,6 @@ import { themeColors } from "../data/dummy";
 const Settings = () => {
   const { setColor, setMode, currentMode, currentColor } = useStateContext();
 
-  console.log("Settings component rendered");
 
   return (
     <div className="space-y-4 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto pb-4">

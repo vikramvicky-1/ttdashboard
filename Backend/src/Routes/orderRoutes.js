@@ -13,6 +13,8 @@ import {
   getDateRangeOrders,
   getDateRangeOrderData,
 } from "../Controllers/orderController.js";
+import { authenticateToken } from "../MIddlewares/authMiddleware.js";
+import { requireAccountantOrAdmin, requireAdmin } from "../MIddlewares/roleMiddleware.js";
 import multer from "multer";
 import path from "path";
 
@@ -53,21 +55,22 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
-router.post("/add-order", upload.single("file"), createOrder);
-router.get("/monthly-orders", getMonthlyOrders);
-router.get("/monthly-order-data", getMonthlyOrderData);
-router.get("/yearly-orders", getYearlyOrdersSummary);
-router.get("/yearly-order-data", getYearlyOrderData);
-router.delete("/delete-order/:id", deleteOrder);
-router.put("/update-order/:id", upload.single("file"), updateOrder);
+// Order routes - Restricted to Accountant and Admin (Staff cannot access)
+router.post("/add-order", authenticateToken, requireAccountantOrAdmin, upload.single("file"), createOrder);
+router.get("/monthly-orders", authenticateToken, requireAccountantOrAdmin, getMonthlyOrders);
+router.get("/monthly-order-data", authenticateToken, requireAccountantOrAdmin, getMonthlyOrderData);
+router.get("/yearly-orders", authenticateToken, requireAccountantOrAdmin, getYearlyOrdersSummary);
+router.get("/yearly-order-data", authenticateToken, requireAccountantOrAdmin, getYearlyOrderData);
+router.delete("/delete-order/:id", authenticateToken, requireAdmin, deleteOrder);
+router.put("/update-order/:id", authenticateToken, requireAdmin, upload.single("file"), updateOrder);
 
 // Date range filter routes
-router.get("/date-range-orders", getDateRangeOrders);
-router.get("/date-range-order-data", getDateRangeOrderData);
+router.get("/date-range-orders", authenticateToken, requireAccountantOrAdmin, getDateRangeOrders);
+router.get("/date-range-order-data", authenticateToken, requireAccountantOrAdmin, getDateRangeOrderData);
 
 // Total orders amount routes
-router.get("/monthly-orders-total", getMonthlyOrdersTotal);
-router.get("/yearly-orders-total", getYearlyOrdersTotal);
-router.get("/date-range-orders-total", getDateRangeOrdersTotal);
+router.get("/monthly-orders-total", authenticateToken, requireAccountantOrAdmin, getMonthlyOrdersTotal);
+router.get("/yearly-orders-total", authenticateToken, requireAccountantOrAdmin, getYearlyOrdersTotal);
+router.get("/date-range-orders-total", authenticateToken, requireAccountantOrAdmin, getDateRangeOrdersTotal);
 
 export default router;

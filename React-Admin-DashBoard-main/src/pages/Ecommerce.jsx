@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { FaRupeeSign } from "react-icons/fa";
+import React, { useEffect, useState } from "react";
+import { BsCurrencyDollar } from "react-icons/bs";
+import { GoPrimitiveDot } from "react-icons/go";
+import { IoIosMore } from "react-icons/io";
 import { DropDownListComponent } from "@syncfusion/ej2-react-dropdowns";
+import { FaRupeeSign } from "react-icons/fa";
 import { useStateContext } from "../contexts/ContextProvider";
-import { earningData, dropdownData } from "../data/dummy";
+import { useRole } from "../contexts/RoleContext";
+import useExpenseStore from "../Store/ExpenseStore";
+import useSalesStore from "../Store/SalesStore";
 import {
   ChartComponent,
   SeriesCollectionDirective,
@@ -21,9 +26,9 @@ import {
   ColorMappingPrimaryXAxis,
   ColorMappingPrimaryYAxis,
   rangeColorMapping,
+  earningData,
+  dropdownData,
 } from "../data/dummy";
-import useExpenseStore from "../Store/ExpenseStore";
-import useSalesStore from "../Store/SalesStore";
 
 const DropDown = ({ currentMode }) => (
   <div className="w-28 border-1 border-color px-2 py-1 rounded-md">
@@ -41,6 +46,7 @@ const DropDown = ({ currentMode }) => (
 
 const Ecommerce = () => {
   const { currentColor, currentMode } = useStateContext();
+  const { permissions } = useRole();
   const {
     selectedMonth,
     selectedYear,
@@ -74,12 +80,10 @@ const Ecommerce = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      console.log("Fetching data with:", { selectedMonth, selectedYear, isDateRangeActive, fromDate, toDate });
       
       try {
         if (isDateRangeActive && fromDate && toDate) {
           // Use date range filter
-          console.log("Using date range filter");
           await Promise.all([
             getDateRangeExpense(fromDate, toDate),
             getDateRangeLoansExpense(fromDate, toDate),
@@ -88,13 +92,11 @@ const Ecommerce = () => {
         } else {
           // Use month/year filter
           if (selectedMonth === 0) {
-            console.log("Using yearly filter");
             await Promise.all([
               getYearlyExpenseSummary(selectedYear),
               getYearlySales(selectedYear)
             ]);
           } else {
-            console.log("Using monthly filter");
             await Promise.all([
               getMonthlyExpense(selectedMonth, selectedYear),
               getTotalLoansExpense(selectedMonth, selectedYear),
@@ -104,7 +106,6 @@ const Ecommerce = () => {
           }
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
       }
     };
     
@@ -146,21 +147,6 @@ const Ecommerce = () => {
       ? yearlyTotalSales 
       : totalSales;
 
-  console.log("Current state:", { 
-    selectedMonth, 
-    selectedYear, 
-    isDateRangeActive, 
-    fromDate, 
-    toDate,
-    monthlyExpense,
-    totalLoansExpense,
-    totalSales,
-    yearlyExpenseSummary,
-    yearlyTotalSales
-  });
-  console.log("displayExpense", displayExpense);
-  console.log("displayLoans", displayLoans);
-  console.log("displaySales", displaySales);
 
   // Calculate In Hand Cash: (Sales + Loans) - Expenses
   const calculateInHandCash = () => {
@@ -176,209 +162,226 @@ const Ecommerce = () => {
 
   return (
     <div className="main-content-mobile">
-      {(expenseLoading || salesLoading) && (
+      {(expenseLoading || salesLoading) ? (
         <div className="flex justify-center items-center h-screen">
           <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
-      )}
-      <div className="w-full px-2 md:px-0">
+      ) : (
+      <div className="w-full px-2 md:px-0 mt-[-70px]">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full ecommerce-cards">
-          {/* In Hand Card */}
-          <div className="bg-white dark:text-gray-500 dark:bg-secondary-dark-bg shadow-2xl h-44 rounded-xl w-full p-8 pt-9 bg-hero-pattern bg-no-repeat bg-cover bg-center flex flex-col justify-between ecommerce-card">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="font-bold text-black text-xl">In Hand</p>
-                <p
-                  className={`text-2xl mt-10 ${
-                    inHandCash <= 0
-                      ? "text-red-500"
-                      : inHandCash > 0 && inHandCash <= 50000
-                      ? "text-yellow-500"
-                      : "text-green-500"
-                  }`}
-                >
-                  ₹{inHandCash.toLocaleString("en-IN")}
-                </p>
-              </div>
-              <button
-                type="button"
-                style={{ background: currentColor }}
-                className="text-2xl opacity-0.9 text-white hover:drop-shadow-xl rounded-full p-4"
-              >
-                <FaRupeeSign />
-              </button>
-            </div>
-          </div>
-          {/* Earnings Cards */}
-          {earningData(displayExpense, displayLoans, displaySales).map(
-            (item) => (
-              <div
-                key={item.title}
-                className="bg-white h-44 dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl w-full p-4 pt-4 rounded-xl flex flex-col justify-between ecommerce-card"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <p className="font-bold text-base text-gray-700 dark:text-gray-200">
-                    {item.title}
-                  </p>
+          {/* Show only Sales chart for Staff, all cards for others */}
+          {permissions.canSeeAllCards && (
+            <>
+              {/* In Hand Card */}
+              <div className="bg-white dark:text-gray-500 dark:bg-secondary-dark-bg shadow-2xl h-44 rounded-xl w-full p-8 pt-9 bg-hero-pattern bg-no-repeat bg-cover bg-center flex flex-col justify-between ecommerce-card">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-bold text-black text-xl">In Hand</p>
+                    <p
+                      className={`text-2xl mt-10 ${
+                        inHandCash <= 0
+                          ? "text-red-500"
+                          : inHandCash > 0 && inHandCash <= 50000
+                          ? "text-yellow-500"
+                          : "text-green-500"
+                      }`}
+                    >
+                      ₹{inHandCash.toLocaleString("en-IN")}
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    style={{
-                      color: item.iconColor,
-                      backgroundColor: item.iconBg,
-                    }}
-                    className="text-2xl rounded-full p-3 hover:drop-shadow-xl"
+                    style={{ background: currentColor }}
+                    className="text-2xl opacity-0.9 text-white hover:drop-shadow-xl rounded-full p-4"
                   >
-                    {item.icon}
+                    <FaRupeeSign />
                   </button>
                 </div>
-                <div className="flex flex-col items-center justify-center flex-1">
-                  <span className="text-xl md:text-3xl font-bold mb-1">
-                    {item.amount}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span
-                    className="text-sm font-semibold"
-                    style={{ color: item.pcColor }}
-                  >
-                    {item.percentage}
-                  </span>
-                </div>
               </div>
-            )
+              {/* Earnings Cards */}
+              {earningData(displayExpense, displayLoans, displaySales).map(
+                (item) => (
+                  <div
+                    key={item.title}
+                    className="bg-white h-44 dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl w-full p-4 pt-4 rounded-xl flex flex-col justify-between ecommerce-card"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="font-bold text-base text-gray-700 dark:text-gray-200">
+                        {item.title}
+                      </p>
+                      <button
+                        type="button"
+                        style={{
+                          color: item.iconColor,
+                          backgroundColor: item.iconBg,
+                        }}
+                        className="text-2xl rounded-full p-3 hover:drop-shadow-xl"
+                      >
+                        {item.icon}
+                      </button>
+                    </div>
+                    <div className="flex flex-col justify-end flex-grow">
+                      <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">
+                        {item.amount}
+                      </p>
+                      <span
+                        className="text-sm font-semibold"
+                        style={{ color: item.pcColor }}
+                      >
+                        {item.percentage}
+                      </span>
+                    </div>
+                  </div>
+                )
+              )}
+            </>
+          )}
+          
+          {/* For Staff users, show only a simple sales chart */}
+          {permissions.isStaff && (
+            <div className="col-span-full">
+              <div className="bg-white dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl rounded-xl p-6">
+                <h3 className="text-xl font-bold mb-4">Sales Overview</h3>
+                <p className="text-3xl font-bold text-green-600">
+                  ₹{displaySales ? Number(displaySales).toLocaleString("en-IN") : "0"}
+                </p>
+                <p className="text-sm text-gray-500 mt-2">Total Sales</p>
+              </div>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Show chart only when a specific month is selected (not 'All' and not date range) */}
-      {selectedMonth !== 0 && !isDateRangeActive && (
-        <div className="flex gap-6 sm:gap-10 flex-col items-center justify-center mt-6">
-          <div className="bg-white dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl m-2 sm:m-3 p-3 sm:p-4 rounded-2xl w-full max-w-6xl">
-            <div className="m-2 p-2 pb-4 md:p-6 lg:p-10 md:m-6 lg:m-10 mt-6 sm:mt-8 md:mt-12 lg:mt-16 md:rounded-3xl dark:bg-secondary-dark-bg rounded-xl bg-gray-200 w-full">
-              <ChartsHeader 
-                category="Sale Report" 
-                title={`DAILY SALES & ORDERS - Total: ₹${dailySalesTotal ? Number(dailySalesTotal).toLocaleString("en-IN") : "0"}`} 
-              />
-              <div 
-                className="w-full chart-container" 
-                style={{ 
-                  scrollbarWidth: "none", 
-                  msOverflowStyle: "none",
-                  WebkitOverflowScrolling: "touch"
-                }}
-              >
-                <style jsx>{`
-                  .chart-container::-webkit-scrollbar {
-                    display: none;
-                  }
-                  
-                  /* Desktop - no scroll, fit to container */
-                  @media (min-width: 1024px) {
-                    .chart-container {
-                      overflow-x: visible;
+        {/* Show chart only when a specific month is selected (not 'All' and not date range) */}
+        {selectedMonth !== 0 && !isDateRangeActive && (
+          <div className="flex gap-6 sm:gap-10 flex-col items-center justify-center mt-6">
+            <div className="bg-white dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl m-2 sm:m-3 p-3 sm:p-4 rounded-2xl w-full max-w-6xl">
+              <div className="m-2 p-2 pb-4 md:p-6 lg:p-10 md:m-6 lg:m-10 mt-6 sm:mt-8 md:mt-12 lg:mt-16 md:rounded-3xl dark:bg-secondary-dark-bg rounded-xl bg-gray-200 w-full">
+                <ChartsHeader 
+                  category="Sale Report" 
+                  title={`DAILY SALES & ORDERS - Total: ₹${dailySalesTotal ? Number(dailySalesTotal).toLocaleString("en-IN") : "0"}`} 
+                />
+                <div 
+                  className="w-full chart-container" 
+                  style={{ 
+                    scrollbarWidth: "none", 
+                    msOverflowStyle: "none",
+                    WebkitOverflowScrolling: "touch"
+                  }}
+                >
+                  <style>{`
+                    .chart-container::-webkit-scrollbar {
+                      display: none;
                     }
-                    .chart-inner {
-                      width: 100% !important;
-                      min-width: auto !important;
-                    }
-                  }
-                  
-                  /* Mobile/Tablet - enable horizontal scroll */
-                  @media (max-width: 1023px) {
-                    .chart-container {
-                      overflow-x: auto;
-                    }
-                    .chart-inner {
-                      min-width: 1200px !important;
-                    }
-                  }
-                `}</style>
-                <div className="chart-inner" style={{ width: "100%", height: "400px" }}>
-                  <ChartComponent
-                    id="DailySalesChart"
-                    primaryXAxis={{
-                      valueType: "Category",
-                      majorGridLines: { width: 0 },
-                      title: "Day of Month",
-                      titleStyle: {
-                        color: currentMode === "Dark" ? "#FFFFFF" : "#000000",
-                        size: "16px",
-                        fontWeight: "500",
-                      },
-                      labelStyle: {
-                        color: currentMode === "Dark" ? "#FFFFFF" : "#000000",
-                        size: "11px",
-                        fontWeight: "500",
-                      },
-                      labelIntersectAction: "None",
-                      interval: 1,
-                      edgeLabelPlacement: "Shift",
-                      labelPlacement: "OnTicks",
-                      tickPosition: "Outside",
-                      majorTickLines: { width: 1, height: 5 },
-                    }}
-                    primaryYAxis={{
-                      lineStyle: { width: 0 },
-                      majorTickLines: { width: 0 },
-                      minorTickLines: { width: 0 },
-                      labelFormat: "₹ {value}",
-                      title: "Sales + Orders Amount",
-                      titleStyle: {
-                        color: currentMode === "Dark" ? "#FFFFFF" : "#000000",
-                        size: "16px",
-                        fontWeight: "500",
-                      },
-                      labelStyle: {
-                        color: currentMode === "Dark" ? "#FFFFFF" : "#000000",
-                      },
-                    }}
-                    chartArea={{ border: { width: 0 } }}
-                    background={currentMode === "Dark" ? "#33373E" : "#fff"}
-                    legendSettings={{ visible: false }}
-                    tooltip={{
-                      enable: true,
-                      format: "Day ${point.x}: ₹${point.y}<br/>",
-                    }}
-                    width="100%"
-                    height="400px"    
-                    pointRender={(args) => {
-                      const value = args.point.y;
-                      if (value < 5000) {
-                        args.fill = '#FF6B6B'; // Red
-                      } else if (value >= 5000 && value <= 10000) {
-                        args.fill = '#FFD93D'; // Yellow
-                      } else {
-                        args.fill = '#6BCF7F'; // Green
+                    
+                    /* Desktop - no scroll, fit to container */
+                    @media (min-width: 1024px) {
+                      .chart-container {
+                        overflow-x: visible;
                       }
-                    }}
-                    zoomSettings={{
-                      enableSelectionZooming: true,
-                      enableScrollbar: true,
-                    }}
-                  >
-                    <Inject
-                      services={[ColumnSeries, Tooltip, Legend, Category]}
-                    />
-                    <SeriesCollectionDirective>
-                      <SeriesDirective
-                        dataSource={dailySalesData}
-                        name="Daily Sales + Orders"
-                        xName="x"
-                        yName="y"
-                        type="Column"
-                        fill="#6BCF7F"
-                        cornerRadius={{
-                          topLeft: 4,
-                          topRight: 4,
-                        }}
+                      .chart-inner {
+                        width: 100% !important;
+                        min-width: auto !important;
+                      }
+                    }
+                    
+                    /* Mobile/Tablet - enable horizontal scroll */
+                    @media (max-width: 1023px) {
+                      .chart-container {
+                        overflow-x: auto;
+                      }
+                      .chart-inner {
+                        min-width: 1200px !important;
+                      }
+                    }
+                  `}</style>
+                  <div className="chart-inner" style={{ width: "100%", height: "400px" }}>
+                    <ChartComponent
+                      id="DailySalesChart"
+                      primaryXAxis={{
+                        valueType: "Category",
+                        majorGridLines: { width: 0 },
+                        title: "Day of Month",
+                        titleStyle: {
+                          color: currentMode === "Dark" ? "#FFFFFF" : "#000000",
+                          size: "16px",
+                          fontWeight: "500",
+                        },
+                        labelStyle: {
+                          color: currentMode === "Dark" ? "#FFFFFF" : "#000000",
+                          size: "11px",
+                          fontWeight: "500",
+                        },
+                        labelIntersectAction: "None",
+                        interval: 1,
+                        edgeLabelPlacement: "Shift",
+                        labelPlacement: "OnTicks",
+                        tickPosition: "Outside",
+                        majorTickLines: { width: 1, height: 5 },
+                      }}
+                      primaryYAxis={{
+                        lineStyle: { width: 0 },
+                        majorTickLines: { width: 0 },
+                        minorTickLines: { width: 0 },
+                        labelFormat: "₹ {value}",
+                        title: "Sales + Orders Amount",
+                        titleStyle: {
+                          color: currentMode === "Dark" ? "#FFFFFF" : "#000000",
+                          size: "16px",
+                          fontWeight: "500",
+                        },
+                        labelStyle: {
+                          color: currentMode === "Dark" ? "#FFFFFF" : "#000000",
+                        },
+                      }}
+                      chartArea={{ border: { width: 0 } }}
+                      background={currentMode === "Dark" ? "#33373E" : "#fff"}
+                      legendSettings={{ visible: false }}
+                      tooltip={{
+                        enable: true,
+                        format: "Day ${point.x}:${point.y}<br/>",
+                      }}
+                      width="100%"
+                      height="400px"    
+                      pointRender={(args) => {
+                        const value = args.point.y;
+                        if (value < 5000) {
+                          args.fill = '#fa0202'; // bright Red
+                        } else if (value >= 5000 && value <= 10000) {
+                          args.fill = '#fae602'; // bright Yellow
+                        } else {
+                          args.fill = '#02fa02'; // bright Green
+                        }
+                      }}
+                      zoomSettings={{
+                        enableSelectionZooming: true,
+                        enableScrollbar: true,
+                      }}
+                    >
+                      <Inject
+                        services={[ColumnSeries, Tooltip, Legend, Category]}
                       />
-                    </SeriesCollectionDirective>
-                  </ChartComponent>
+                      <SeriesCollectionDirective>
+                        <SeriesDirective
+                          dataSource={dailySalesData}
+                          name="Daily Sales + Orders"
+                          xName="x"
+                          yName="y"
+                          type="Column"
+                          fill="#6BCF7F"
+                          cornerRadius={{
+                            topLeft: 10,
+                            topRight: 10,
+                          }}
+                        />
+                      </SeriesCollectionDirective>
+                    </ChartComponent>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
+      </div>
       )}
     </div>
   );

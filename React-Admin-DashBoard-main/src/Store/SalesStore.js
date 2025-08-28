@@ -85,7 +85,6 @@ const useSalesStore = create((set, get) => ({
         combinedTotal: salesTotal + ordersTotal
       };
     } catch (error) {
-      console.error('Error fetching combined totals:', error);
       return {
         totalSales: 0,
         totalOrders: 0,
@@ -105,7 +104,6 @@ const useSalesStore = create((set, get) => ({
       set({ monthlySales: response.data.monthlySales });
       set({ loading: false });
     } catch (error) {
-      console.error("Error fetching monthly sales:", error);
       set({ loading: false });
       throw error;
     }
@@ -121,7 +119,6 @@ const useSalesStore = create((set, get) => ({
       set({ monthlyOrders: response.data.monthlyOrders });
       set({ loading: false });
     } catch (error) {
-      console.error("Error fetching monthly orders:", error);
       set({ loading: false });
       throw error;
     }
@@ -142,7 +139,6 @@ const useSalesStore = create((set, get) => ({
       set({ salesPieChartData: pieChartData });
       set({ loading: false });
     } catch (error) {
-      console.error("Error fetching sales pie chart data:", error);
       set({ loading: false });
       throw error;
     }
@@ -168,7 +164,6 @@ const useSalesStore = create((set, get) => ({
         loading: false,
       });
     } catch (error) {
-      console.error("Error fetching yearly sales summary:", error);
       set({ loading: false });
       throw error;
     }
@@ -198,7 +193,6 @@ const useSalesStore = create((set, get) => ({
       });
       set({ monthlyOrderData: response.data, loading: false });
     } catch (error) {
-      console.error("Error fetching monthly order data:", error);
       set({ loading: false });
       throw error;
     }
@@ -227,6 +221,8 @@ const useSalesStore = create((set, get) => ({
         config
       );
       toast.success("Sales added successfully!");
+      // Trigger data refresh for real-time updates
+      useExpenseStore.getState().triggerDataRefresh();
       return response.data;
     } catch (error) {
       toast.error(
@@ -259,6 +255,8 @@ const useSalesStore = create((set, get) => ({
         config
       );
       toast.success("Order added successfully!");
+      // Trigger data refresh for real-time updates
+      useExpenseStore.getState().triggerDataRefresh();
       return response.data;
     } catch (error) {
       toast.error(
@@ -272,6 +270,8 @@ const useSalesStore = create((set, get) => ({
     try {
       await axiosInstance.delete(`/sales/delete-sales/${id}`);
       toast.success("Sale deleted successfully!");
+      // Trigger data refresh for real-time updates
+      useExpenseStore.getState().triggerDataRefresh();
     } catch (error) {
       toast.error(
         error?.response?.data?.error ||
@@ -285,6 +285,8 @@ const useSalesStore = create((set, get) => ({
     try {
       await axiosInstance.delete(`/order/delete-order/${id}`);
       toast.success("Order deleted successfully!");
+      // Trigger data refresh for real-time updates
+      useExpenseStore.getState().triggerDataRefresh();
     } catch (error) {
       toast.error(
         error?.response?.data?.error ||
@@ -316,9 +318,10 @@ const useSalesStore = create((set, get) => ({
         config
       );
       toast.success("Sale updated successfully!");
+      // Trigger data refresh for real-time updates
+      useExpenseStore.getState().triggerDataRefresh();
       return response.data;
     } catch (error) {
-      console.error("Update sale error details:", error);
       const errorMessage =
         error?.response?.data?.error ||
         error?.message ||
@@ -350,9 +353,10 @@ const useSalesStore = create((set, get) => ({
         config
       );
       toast.success("Order updated successfully!");
+      // Trigger data refresh for real-time updates
+      useExpenseStore.getState().triggerDataRefresh();
       return response.data;
     } catch (error) {
-      console.error("Update order error details:", error);
       const errorMessage =
         error?.response?.data?.error ||
         error?.message ||
@@ -378,7 +382,6 @@ const useSalesStore = create((set, get) => ({
         loading: false,
       });
     } catch (error) {
-      console.error("Error fetching date range sales:", error);
       set({ loading: false });
       throw error;
     }
@@ -395,7 +398,6 @@ const useSalesStore = create((set, get) => ({
         loading: false,
       });
     } catch (error) {
-      console.error("Error fetching date range orders:", error);
       set({ loading: false });
       throw error;
     }
@@ -425,7 +427,6 @@ const useSalesStore = create((set, get) => ({
         loading: false,
       });
     } catch (error) {
-      console.error("Error fetching date range sales pie chart data:", error);
       set({ loading: false });
       throw error;
     }
@@ -439,7 +440,6 @@ const useSalesStore = create((set, get) => ({
       });
       set({ monthlyOrderData: response.data, loading: false });
     } catch (error) {
-      console.error("Error fetching date range order data:", error);
       set({ loading: false });
       throw error;
     }
@@ -468,7 +468,6 @@ const useSalesStore = create((set, get) => ({
       });
       set({ orders: response.data.orders || [], loading: false });
     } catch (error) {
-      console.error("Error fetching yearly orders:", error);
       set({ loading: false });
       throw error;
     }

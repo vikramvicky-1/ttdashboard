@@ -1,13 +1,31 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import {
+  GridComponent,
+  ColumnsDirective,
+  ColumnDirective,
+  Resize,
+  Sort,
+  ContextMenu,
+  Filter,
+  Page,
+  ExcelExport,
+  PdfExport,
+  Edit,
+  Inject,
+  Toolbar,
+} from "@syncfusion/ej2-react-grids";
+
+import { Header } from "../components";
+import { useRole } from "../contexts/RoleContext";
 import { useStateContext } from "../contexts/ContextProvider";
-import { FiDownload, FiFileText, FiEdit2, FiTrash2, FiEye } from "react-icons/fi";
-import { FaSortUp, FaSortDown } from "react-icons/fa";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
 import useSalesStore from "../Store/SalesStore";
 import useExpenseStore from "../Store/ExpenseStore";
+import jsPDF from "jspdf";
+import jsPDFAutoTable from "jspdf-autotable";
 import { ConfirmationModal, AttachmentModal } from "../components";
+import { FiDownload, FiFileText, FiEye, FiEdit, FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FaSortUp, FaSortDown } from "react-icons/fa";
+import { MdEdit, MdDelete } from "react-icons/md";
  
 
 // Edit Sales Modal Component
@@ -54,7 +72,6 @@ const EditSalesModal = ({ sale, onClose, onSave }) => {
       if (fileInputRef.current) fileInputRef.current.value = "";
       onClose();
     } catch (err) {
-      console.error("Update sale error:", err);
       const errorMessage =
         err?.response?.data?.error ||
         err?.message ||
@@ -332,7 +349,6 @@ const EditOrderModal = ({ order, onClose, onSave }) => {
       if (fileInputRef.current) fileInputRef.current.value = "";
       onClose();
     } catch (err) {
-      console.error("Update order error:", err);
       const errorMessage =
         err?.response?.data?.error ||
         err?.message ||
@@ -498,6 +514,7 @@ const EditOrderModal = ({ order, onClose, onSave }) => {
 
 const SalesData = () => {
   const { currentColor, currentMode } = useStateContext();
+  const { permissions } = useRole();
   const {
     sales,
     orders,
@@ -522,6 +539,7 @@ const SalesData = () => {
     isDateRangeActive,
     fromDate,
     toDate,
+    dataRefreshTrigger,
   } = useExpenseStore();
 
   const [activeTab, setActiveTab] = useState("sales");
@@ -569,47 +587,85 @@ const SalesData = () => {
 
   // Load data based on current filter mode
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchData = async () => {
-      if (isDateRangeActive && fromDate && toDate) {
-        await Promise.all([
-          getDateRangeSalesData(fromDate, toDate),
-          getDateRangeOrdersData(fromDate, toDate)
-        ]);
-      } else {
-        if (Number(selectedMonth) === 0) {
-          // Get yearly data
+      try {
+        if (isDateRangeActive && fromDate && toDate) {
           await Promise.all([
-            getSales(selectedYear),
-            getOrders(selectedYear)
+            getDateRangeSalesData(fromDate, toDate),
+            getDateRangeOrdersData(fromDate, toDate)
           ]);
         } else {
-          // Get monthly data
-          await Promise.all([
-            getSalesData(Number(selectedMonth), Number(selectedYear)),
-            getOrdersData(Number(selectedMonth), Number(selectedYear))
-          ]);
+          if (Number(selectedMonth) === 0) {
+            // Get yearly data
+            await Promise.all([
+              getSales(selectedYear),
+              getOrders(selectedYear)
+            ]);
+          } else {
+            // Get monthly data
+            await Promise.all([
+              getSalesData(Number(selectedMonth), Number(selectedYear)),
+              getOrdersData(Number(selectedMonth), Number(selectedYear))
+            ]);
+          }
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching data:', error);
         }
       }
     };
     
     fetchData();
-  }, [selectedMonth, selectedYear, isDateRangeActive, fromDate, toDate]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedMonth, selectedYear, isDateRangeActive, fromDate, toDate, dataRefreshTrigger]);
 
   // Calculate combined totals for dashboard card from backend
   const calculateCombinedTotals = useCallback(async () => {
+    let isMounted = true;
     try {
       const totals = await getCombinedTotals();
-      setCombinedTotals(totals);
+      if (isMounted) {
+        setCombinedTotals(totals);
+      }
     } catch (error) {
-      console.error('Error calculating combined totals:', error);
-      setCombinedTotals({ totalSales: 0, totalOrders: 0, combinedTotal: 0 });
+      if (isMounted) {
+        setCombinedTotals({ totalSales: 0, totalOrders: 0, combinedTotal: 0 });
+      }
     }
+    return () => {
+      isMounted = false;
+    };
   }, [getCombinedTotals]);
 
   // Recalculate combined totals when filters change
   useEffect(() => {
-    calculateCombinedTotals();
-  }, [selectedMonth, selectedYear, isDateRangeActive, fromDate, toDate, calculateCombinedTotals]);
+    let isMounted = true;
+    
+    const fetchTotals = async () => {
+      try {
+        const totals = await getCombinedTotals();
+        if (isMounted) {
+          setCombinedTotals(totals);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setCombinedTotals({ totalSales: 0, totalOrders: 0, combinedTotal: 0 });
+        }
+      }
+    };
+    
+    fetchTotals();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedMonth, selectedYear, isDateRangeActive, fromDate, toDate, dataRefreshTrigger, getCombinedTotals]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-IN");
@@ -720,7 +776,6 @@ const SalesData = () => {
           }
           setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
         } catch (error) {
-          console.error("Error deleting item:", error);
           setConfirmModal(prev => ({ ...prev, loading: false }));
         } finally {
           setDeletingId(null);
@@ -763,7 +818,6 @@ const SalesData = () => {
       }
       setEditModal({ open: false, item: null, type: null });
     } catch (error) {
-      console.error("Error updating item:", error);
       throw error;
     }
   };
@@ -822,34 +876,44 @@ const SalesData = () => {
 
   const exportToPDF = (data, filename) => {
     const doc = new jsPDF({ orientation: "landscape" });
-    const title = `${activeTab === "sales" ? "Sales" : "Orders"} Report`;
-    const subtitle = `Period: ${
-      Number(selectedMonth) === 0 ? "All Year" : `Month ${selectedMonth}`
-    } ${selectedYear}`;
+    const title = `${activeTab === "sales" ? "Sales" : "Orders"} Report for TT KOTHANUR BLR 04`;
+    
+    let subtitle;
+    if (isDateRangeActive && fromDate && toDate) {
+      const formatDate = (dateStr) => {
+        const d = new Date(dateStr);
+        return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+      };
+      subtitle = `Period: ${formatDate(fromDate)} to ${formatDate(toDate)}`;
+    } else {
+      subtitle = `Period: ${
+        Number(selectedMonth) === 0 ? "All Year" : `Month ${selectedMonth}`
+      } ${selectedYear}`;
+    }
 
-    doc.setFontSize(16);
-    doc.text(title, 20, 20);
-    doc.setFontSize(12);
-    doc.text(subtitle, 20, 30);
+    doc.setFontSize(13);
+    doc.text(title, 150, 15, { align: "center" });
+    doc.setFontSize(10);
+    doc.text(subtitle, 150, 22, { align: "center" });
 
     const tableData = data.map((item) => {
       if (activeTab === "sales") {
         return [
           formatDate(item.date),
-          `₹${item.openingCash}`,
-          `₹${item.purchaseCash}`,
-          `₹${item.onlineCash}`,
-          `₹${item.physicalCash}`,
-          `₹${item.cashTransferred}`,
-          `₹${item.closingCash}`,
-          `₹${item.totalSales}`,
+          item.openingCash,
+          item.purchaseCash,
+          item.onlineCash,
+          item.physicalCash,
+          item.cashTransferred,
+          item.closingCash,
+          item.totalSales,
         ];
       } else {
         return [
           formatDate(item.orderDate),
           formatDate(item.deliveryDate),
           item.orderId,
-          `₹${item.amount}`,
+          item.amount,
           item.paymentMode,
           item.attachment ? "Yes" : "No",
           item.remarks || "",
@@ -879,13 +943,82 @@ const SalesData = () => {
             "Remarks",
           ];
 
-    doc.autoTable({
+    jsPDFAutoTable(doc, {
       head: [headers],
       body: tableData,
-      startY: 40,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [66, 139, 202] },
+      startY: 28,
+      styles: {
+        fontSize: 7.5,
+        cellPadding: 1.5,
+        halign: "center",
+        valign: "middle",
+        lineColor: [200, 200, 200],
+        lineWidth: 0.1,
+      },
+      headStyles: {
+        fillColor: [74, 109, 167],
+        textColor: 255,
+        fontStyle: "bold",
+        halign: "center",
+        valign: "middle",
+      },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: activeTab === "sales" ? {
+        0: { cellWidth: "auto" }, // Date
+        1: { cellWidth: "auto" }, // Opening Cash
+        2: { cellWidth: "auto" }, // Purchase Cash
+        3: { cellWidth: "auto" }, // Online Cash
+        4: { cellWidth: "auto" }, // Physical Cash
+        5: { cellWidth: "auto" }, // Cash Transferred
+        6: { cellWidth: "auto" }, // Closing Cash
+        7: { cellWidth: "auto" }, // Total Sales
+      } : {
+        0: { cellWidth: "auto" }, // Order Date
+        1: { cellWidth: "auto" }, // Delivery Date
+        2: { cellWidth: "auto" }, // Order ID
+        3: { cellWidth: "auto" }, // Amount
+        4: { cellWidth: "auto" }, // Payment Mode
+        5: { cellWidth: "auto" }, // Attachment
+        6: { cellWidth: "auto" }, // Remarks
+      },
+      margin: { left: 10, right: 10 },
+      tableWidth: "wrap",
     });
+
+    // Add summary data below the table
+    const finalY = doc.lastAutoTable.finalY + 15;
+    
+    if (activeTab === "sales") {
+      // Sales summary calculations
+      const totalOnline = data.reduce((sum, sale) => sum + Number(sale.onlineCash), 0);
+      const totalPhysical = data.reduce((sum, sale) => sum + Number(sale.physicalCash), 0);
+      const totalSales = data.reduce((sum, sale) => sum + Number(sale.totalSales), 0);
+      
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text("Sales Summary", 20, finalY);
+      
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Total Online: ₹${totalOnline.toLocaleString("en-IN")}`, 20, finalY + 10);
+      doc.text(`Total Physical: ₹${totalPhysical.toLocaleString("en-IN")}`, 20, finalY + 20);
+      doc.text(`Total Sales: ₹${totalSales.toLocaleString("en-IN")}`, 20, finalY + 30);
+    } else {
+      // Orders summary calculations
+      const totalOrders = data.length;
+      const totalAmount = data.reduce((sum, order) => sum + Number(order.amount), 0);
+      const averageOrder = totalOrders > 0 ? Math.round(totalAmount / totalOrders) : 0;
+      
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text("Orders Summary", 20, finalY);
+      
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Total Orders: ${totalOrders}`, 20, finalY + 10);
+      doc.text(`Total Amount: ₹${totalAmount.toLocaleString("en-IN")}`, 20, finalY + 20);
+      doc.text(`Average Order: ₹${averageOrder.toLocaleString("en-IN")}`, 20, finalY + 30);
+    }
 
     doc.save(filename);
   };
@@ -1170,33 +1303,32 @@ const SalesData = () => {
                               )}
                             </td>
                             <td className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm">
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => handleEdit(sale, "sales")}
-                                  disabled={deletingId === sale._id}
-                                  className={`p-1 bg-blue-500 text-white rounded hover:bg-blue-600 ${
-                                    deletingId === sale._id
-                                      ? "opacity-50 cursor-not-allowed"
-                                      : ""
-                                  }`}
-                                >
-                                  <FiEdit2 size={14} />
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(sale, "sales")}
-                                  disabled={deletingId === sale._id}
-                                  className={`p-1 bg-red-500 text-white rounded hover:bg-red-600 ${
-                                    deletingId === sale._id
-                                      ? "opacity-50 cursor-not-allowed"
-                                      : ""
-                                  }`}
-                                >
-                                  {deletingId === sale._id ? (
-                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                                  ) : (
-                                    <FiTrash2 size={14} />
-                                  )}
-                                </button>
+                              <div className="flex gap-1">
+                                {permissions.canSeeActions && (
+                                  <>
+                                    <button
+                                      onClick={() => handleEdit(sale, "sales")}
+                                      className="p-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                    >
+                                      <FiEdit size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDelete(sale, "sales")}
+                                      disabled={deletingId === sale._id}
+                                      className={`p-1 bg-red-500 text-white rounded hover:bg-red-600 ${
+                                        deletingId === sale._id
+                                          ? "opacity-50 cursor-not-allowed"
+                                          : ""
+                                      }`}
+                                    >
+                                      {deletingId === sale._id ? (
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                      ) : (
+                                        <FiTrash2 size={14} />
+                                      )}
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -1438,32 +1570,36 @@ const SalesData = () => {
                             </td>
                             <td className="border border-gray-300 dark:border-gray-600 px-2 py-2 text-xs sm:text-sm">
                               <div className="flex gap-2">
-                                <button
-                                  onClick={() => handleEdit(order, "orders")}
-                                  disabled={deletingId === order._id}
-                                  className={`p-1 bg-blue-500 text-white rounded hover:bg-blue-600 ${
-                                    deletingId === order._id
-                                      ? "opacity-50 cursor-not-allowed"
-                                      : ""
-                                  }`}
-                                >
-                                  <FiEdit2 size={14} />
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(order, "orders")}
-                                  disabled={deletingId === order._id}
-                                  className={`p-1 bg-red-500 text-white rounded hover:bg-red-600 ${
-                                    deletingId === order._id
-                                      ? "opacity-50 cursor-not-allowed"
-                                      : ""
-                                  }`}
-                                >
-                                  {deletingId === order._id ? (
-                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                                  ) : (
-                                    <FiTrash2 size={14} />
-                                  )}
-                                </button>
+                                {permissions.canSeeActions && (
+                                  <>
+                                    <button
+                                      onClick={() => handleEdit(order, "orders")}
+                                      disabled={deletingId === order._id}
+                                      className={`p-1 bg-blue-500 text-white rounded hover:bg-blue-600 ${
+                                        deletingId === order._id
+                                          ? "opacity-50 cursor-not-allowed"
+                                          : ""
+                                      }`}
+                                    >
+                                      <FiEdit2 size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDelete(order, "orders")}
+                                      disabled={deletingId === order._id}
+                                      className={`p-1 bg-red-500 text-white rounded hover:bg-red-600 ${
+                                        deletingId === order._id
+                                          ? "opacity-50 cursor-not-allowed"
+                                          : ""
+                                      }`}
+                                    >
+                                      {deletingId === order._id ? (
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                      ) : (
+                                        <FiTrash2 size={14} />
+                                      )}
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             </td>
                           </tr>

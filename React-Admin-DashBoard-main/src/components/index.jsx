@@ -8,6 +8,8 @@ export { default as DateRangeFilter } from "./DateRangeFilter";
 export { default as AttachmentModal } from "./AttachmentModal";
 export { default as ConfirmationModal } from "./ConfirmationModal";
 export { default as ChartsHeader } from "./ChartsHeader";
+export { default as ProtectedRoute } from "./ProtectedRoute";
+export { default as RoleProtectedRoute } from "./RoleProtectedRoute";
 // Charts
 export { default as Doughnut } from "./Charts/Pie";
 export { default as SparkLine } from "./Charts/SparkLine";

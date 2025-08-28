@@ -42,11 +42,41 @@ const ConfirmationModal = ({
 
   const styles = getTypeStyles();
 
+  const handleConfirmClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onConfirm();
+  };
+
+  const handleCancelClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClose();
+  };
+
+  const handleModalContentClick = (e) => {
+    e.stopPropagation();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className={`max-w-md w-full rounded-lg shadow-xl overflow-hidden ${
-        currentMode === "Dark" ? "bg-gray-800" : "bg-white"
-      }`}>
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[99999] p-2 sm:p-4"
+      style={{ 
+        touchAction: 'none',
+        WebkitTouchCallout: 'none',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+        pointerEvents: 'auto'
+      }}
+    >
+      <div 
+        className={`max-w-md w-full mx-2 sm:mx-0 rounded-lg shadow-2xl overflow-hidden transform transition-all ${
+          currentMode === "Dark" ? "bg-gray-800" : "bg-white"
+        }`}
+        onClick={handleModalContentClick}
+        onTouchStart={handleModalContentClick}
+        style={{ pointerEvents: 'auto' }}
+      >
         {/* Header */}
         <div className={`flex items-center justify-between p-4 border-b ${
           currentMode === "Dark" ? "border-gray-700" : "border-gray-200"
@@ -60,11 +90,12 @@ const ConfirmationModal = ({
             </h3>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleCancelClick}
             disabled={loading}
             className={`p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
               currentMode === "Dark" ? "text-gray-400" : "text-gray-600"
             } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+            style={{ touchAction: 'manipulation' }}
           >
             <MdClose size={20} />
           </button>
@@ -80,26 +111,30 @@ const ConfirmationModal = ({
         </div>
 
         {/* Footer */}
-        <div className={`flex items-center justify-end gap-3 p-4 border-t ${
+        <div className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 p-4 border-t ${
           currentMode === "Dark" ? "border-gray-700 bg-gray-750" : "border-gray-200 bg-gray-50"
         }`}>
           <button
-            onClick={onClose}
+            onClick={handleCancelClick}
             disabled={loading}
-            className={`px-4 py-2 rounded-lg border transition-colors ${
+            type="button"
+            className={`w-full sm:w-auto px-4 py-3 sm:py-2 rounded-lg border transition-colors text-center ${
               currentMode === "Dark"
                 ? "border-gray-600 text-gray-300 hover:bg-gray-700"
                 : "border-gray-300 text-gray-700 hover:bg-gray-100"
             } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+            style={{ touchAction: 'manipulation' }}
           >
             {cancelText}
           </button>
           <button
-            onClick={onConfirm}
+            onClick={handleConfirmClick}
             disabled={loading}
-            className={`px-4 py-2 text-white rounded-lg transition-colors flex items-center gap-2 ${styles.button} ${
+            type="button"
+            className={`w-full sm:w-auto px-4 py-3 sm:py-2 text-white rounded-lg transition-colors flex items-center justify-center gap-2 ${styles.button} ${
               loading ? "opacity-75 cursor-not-allowed" : ""
             }`}
+            style={{ touchAction: 'manipulation' }}
           >
             {loading && (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

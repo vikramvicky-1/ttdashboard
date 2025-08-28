@@ -377,6 +377,11 @@ export const updateExpense = async (req, res) => {
     // Update fields
     const updateData = { ...req.body, fileUrl };
 
+    // Clean up paymentMode for pending status
+    if (updateData.paymentStatus === "Pending") {
+      updateData.paymentMode = undefined;
+    }
+
     // Validate subcategory if provided
     if (updateData.subCategory && updateData.category) {
       const category = await Category.findOne({ name: updateData.category });
@@ -403,7 +408,7 @@ export const updateExpense = async (req, res) => {
     console.log("Update data:", updateData);
     expense = await Expense.findByIdAndUpdate(id, updateData, {
       new: true,
-      runValidators: true,
+      runValidators: false,
     });
     console.log("Updated expense:", expense);
     res.status(200).json({ expense, message: "Expense updated successfully" });

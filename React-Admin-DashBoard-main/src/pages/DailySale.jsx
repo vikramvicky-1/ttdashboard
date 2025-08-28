@@ -3,10 +3,12 @@ import { useStateContext } from "../contexts/ContextProvider";
 import { FiPlus, FiEye } from "react-icons/fi";
 import useSalesStore from "../Store/SalesStore";
 import { AttachmentModal } from "../components";
+import { useAuth } from "../contexts/AuthContext";
  
 
 const DailySale = () => {
   const { currentColor, currentMode } = useStateContext();
+  const { user } = useAuth();
   const { addSales, addOrder } = useSalesStore();
   const [showSalesForm, setShowSalesForm] = useState(false);
   const [showOrderForm, setShowOrderForm] = useState(false);
@@ -168,15 +170,18 @@ const DailySale = () => {
               >
                 <FiPlus /> Add Sales
               </button>
-              <button
-                onClick={() => {
-                  setShowOrderForm(!showOrderForm);
-                  setShowSalesForm(false);
-                }}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
-              >
-                <FiPlus /> Add Order
-              </button>
+              {/* Add Order Button - Hidden for Staff */}
+              {user?.role !== 'staff' && (
+                <button
+                  onClick={() => {
+                    setShowOrderForm(!showOrderForm);
+                    setShowSalesForm(false);
+                  }}
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
+                >
+                  <FiPlus /> Add Order
+                </button>
+              )}
             </div>
 
             {/* Sales Form */}
@@ -428,8 +433,8 @@ const DailySale = () => {
               </div>
             )}
 
-            {/* Order Form */}
-            {showOrderForm && (
+            {/* Order Form - Hidden for Staff */}
+            {showOrderForm && user?.role !== 'staff' && (
               <div
                 className={`rounded-lg shadow-lg p-3 sm:p-4 md:p-6 mb-6 w-full min-w-0 overflow-hidden ${
                   currentMode === "Dark" ? "bg-gray-800" : "bg-white"

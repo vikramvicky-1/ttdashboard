@@ -5,25 +5,10 @@ const expenseSchema = new mongoose.Schema(
   {
     category: {
       type: String,
-      required: true,
-      validate: {
-        validator: async function(value) {
-          const category = await Category.findOne({ name: value });
-          return !!category;
-        },
-        message: 'Category does not exist'
-      }
+      required: true
     },
     subCategory: {
-      type: String,
-      validate: {
-        validator: async function(value) {
-          if (!value) return true; // subcategory is optional
-          const category = await Category.findOne({ name: this.category });
-          return category && category.subCategories.includes(value);
-        },
-        message: 'Subcategory does not exist for this category'
-      }
+      type: String
     },
     date: {
       type: Date,
@@ -46,9 +31,9 @@ const expenseSchema = new mongoose.Schema(
       },
       validate: {
         validator: function (value) {
-          // If status is "Pending", paymentMode must be undefined/null
+          // If status is "Pending", paymentMode must be undefined/null/empty string
           if (this.paymentStatus === "Pending") {
-            return value === undefined || value === null;
+            return value === undefined || value === null || value === "";
           }
           return true; // Otherwise, value must be valid per enum
         },

@@ -4,6 +4,7 @@ import salesRoutes from "./Routes/salesRoutes.js";
 import orderRoutes from "./Routes/orderRoutes.js";
 import categoryRoutes from "./Routes/categoryRoutes.js";
 import userRoutes from "./Routes/userRoutes.js";
+import authRoutes from "./Routes/authRoutes.js";
 import cors from "cors";
 import path from "path";
 
@@ -31,10 +32,11 @@ app.use(
 // Serve uploaded files statically
 app.use("/uploads", express.static(path.resolve("./uploads")));
 
+app.use("/api/auth", authRoutes);
 app.use("/api/expense", expenseRoutes);
 app.use("/api/sales", salesRoutes);
 app.use("/api/order", orderRoutes);
-app.use("/api", categoryRoutes);
+app.use("/api/categories", categoryRoutes);
 app.use("/api/users", userRoutes);
 
 // 404 fallback

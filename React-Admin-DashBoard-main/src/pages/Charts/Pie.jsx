@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { ChartsHeader, Doughnut as PieChart, ConfirmationModal, AttachmentModal } from "../../components";
 import useExpenseStore from "../../Store/ExpenseStore";
 import { useStateContext } from "../../contexts/ContextProvider";
+import { useRole } from "../../contexts/RoleContext";
 import {
   FaEdit,
   FaTrash,
@@ -13,7 +14,7 @@ import {
 import { FiEye } from "react-icons/fi";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import jsPDFAutoTable from "jspdf-autotable";
 const paymentModes = ["Cash", "Online"];
 
 const monthNames = [
@@ -34,6 +35,7 @@ const monthNames = [
 
 const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
   const { currentMode, currentColor } = useStateContext();
+  const { permissions } = useRole();
   const {
     deleteExpense,
     updateExpense,
@@ -180,7 +182,23 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
         try {
           setConfirmModal(prev => ({ ...prev, loading: true }));
           const doc = new jsPDF({ orientation: "landscape" });
-          doc.text("Expense Report", 20, 20);
+          
+          let title = "Expense Report for TT KOTHANUR BLR 04";
+          let subtitle;
+          if (isDateRangeActive && fromDate && toDate) {
+            const formatDate = (dateStr) => {
+              const d = new Date(dateStr);
+              return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+            };
+            subtitle = `Period: ${formatDate(fromDate)} to ${formatDate(toDate)}`;
+          } else {
+            subtitle = `Month: ${selectedMonth ? monthNames[selectedMonth] : "All"}  Year: ${selectedYear}`;
+          }
+          
+          doc.setFontSize(13);
+          doc.text(title, 150, 15, { align: "center" });
+          doc.setFontSize(10);
+          doc.text(subtitle, 150, 22, { align: "center" });
           
           const tableData = filteredExpenses.map(exp => [
             formatDate(exp.date),
@@ -201,13 +219,22 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
             body: tableData,
             startY: 30,
             styles: { fontSize: 8 },
-            headStyles: { fillColor: [66, 139, 202] }
+            headStyles: { fillColor: [66, 139, 202] },
+            margin: { left: 10, right: 10 },
+            tableWidth: "wrap"
           });
+          
+          // Add total amount at the bottom
+          const totalAmount = filteredExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+          const finalY = doc.lastAutoTable.finalY + 10;
+          
+          doc.setFontSize(12);
+          doc.setFont(undefined, 'bold');
+          doc.text(`Total Amount: ₹${totalAmount.toFixed(2)}`, 150, finalY, { align: "center" });
           
           doc.save(`expense-report-${new Date().toISOString().split('T')[0]}.pdf`);
           setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
         } catch (error) {
-          console.error("Error generating PDF:", error);
           setConfirmModal(prev => ({ ...prev, loading: false }));
         }
       },
@@ -249,9 +276,18 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
   const doExportPDF = () => {
     const doc = new jsPDF({ orientation: "portrait" });
     const title = `Expense Report for TT KOTHANUR BLR 04`;
-    const subtitle = `Month: ${
-      selectedMonth ? monthNames[selectedMonth] : "All"
-    }  Year: ${selectedYear}`;
+    let subtitle;
+    if (isDateRangeActive && fromDate && toDate) {
+      const formatDate = (dateStr) => {
+        const d = new Date(dateStr);
+        return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+      };
+      subtitle = `Period: ${formatDate(fromDate)} to ${formatDate(toDate)}`;
+    } else {
+      subtitle = `Month: ${
+        selectedMonth ? monthNames[selectedMonth] : "All"
+      }  Year: ${selectedYear}`;
+    }
     doc.setFontSize(13);
     doc.text(title, 105, 15, { align: "center" });
     doc.setFontSize(10);
@@ -276,7 +312,7 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
       exp.attachment || "",
       exp.remarks || exp.remark || "",
     ]);
-    doc.autoTable({
+    jsPDFAutoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       startY: 28,
@@ -309,18 +345,27 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
         }
       },
       columnStyles: {
-        0: { cellWidth: 18 }, // Date
-        1: { cellWidth: 22 }, // Category
-        2: { cellWidth: 22 }, // Sub-Category
-        3: { cellWidth: 13 }, // Amount
-        4: { cellWidth: 13 }, // Status
-        5: { cellWidth: 18 }, // Payment Mode
-        6: { cellWidth: 22 }, // Attachment
-        7: { cellWidth: 32 }, // Remark
+        0: { cellWidth: "auto" }, // Date
+        1: { cellWidth: "auto" }, // Category
+        2: { cellWidth: "auto" }, // Sub-Category
+        3: { cellWidth: "auto" }, // Amount
+        4: { cellWidth: "auto" }, // Status
+        5: { cellWidth: "auto" }, // Payment Mode
+        6: { cellWidth: "auto" }, // Attachment
+        7: { cellWidth: "auto" }, // Remark
       },
-      margin: { left: 5, right: 5 },
-      tableWidth: "auto",
+      margin: { left: 10, right: 10 },
+      tableWidth: "wrap",
     });
+    
+    // Add total amount at the bottom
+    const totalAmount = filteredExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+    const finalY = doc.lastAutoTable.finalY + 10;
+    
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Total Amount: ₹${totalAmount.toFixed(2)}`, 105, finalY, { align: "center" });
+    
     doc.save(
       `Expense_Report_TT_KOTHANUR_BLR_04_${selectedYear}_${selectedMonth}.pdf`
     );
@@ -333,6 +378,9 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
     row: null,
   });
   const [editModal, setEditModal] = useState({ open: false, expense: null });
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const handleUpdateExpense = async (expenseId, updatedData) => {
     try {
       await updateExpense(expenseId, updatedData);
@@ -344,7 +392,6 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
       }
       setEditModal({ open: false, expense: null });
     } catch (error) {
-      console.error("Error updating expense:", error);
       throw error;
     }
   };
@@ -362,7 +409,6 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
       }
       setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
     } catch (error) {
-      console.error("Error deleting expense:", error);
       setConfirmModal(prev => ({ ...prev, loading: false }));
     } finally {
       setDeletingExpenseId(null);
@@ -535,7 +581,7 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
                 { key: "attachment", label: "Attachment" },
                 { key: "remarks", label: "Remark" },
                 { key: "actions", label: "Actions", sortable: false },
-              ].map((col) => (
+              ].filter((col) => col.key !== "actions" || permissions.canSeeActions).map((col) => (
                 <th
                   key={col.key}
                   className="px-3 py-3 border text-base cursor-pointer select-none"
@@ -643,46 +689,58 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
                   <td className="border px-3 py-3 whitespace-nowrap text-base">
                     {exp.remarks || exp.remark || "-"}
                   </td>
-                  <td className="border px-3 py-3 whitespace-nowrap flex gap-3 justify-center items-center">
-                    <button
-                      className={`${
-                        deletingExpenseId
-                          ? "text-gray-400 cursor-not-allowed"
-                          : "text-blue-500 hover:text-blue-700"
-                      }`}
-                      title="Edit"
-                      onClick={() => {
-                        setEditModal({ open: true, expense: exp });
-                      }}
-                      disabled={deletingExpenseId}
-                    >
-                      <FaEdit className="text-2xl" />
-                    </button>
-                    <button
-                      className={`${
-                        deletingExpenseId === exp._id
-                          ? "text-gray-400 cursor-not-allowed"
-                          : "text-red-500 hover:text-red-700"
-                      }`}
-                      title="Delete"
-                      onClick={() => {
-                        setConfirmModal({
-                          isOpen: true,
-                          type: 'danger',
-                          title: 'Delete Expense',
-                          message: `Are you sure you want to delete this expense? This action cannot be undone.`,
-                          onConfirm: () => handleDeleteExpense(exp),
-                          loading: false
-                        });
-                      }}
-                      disabled={deletingExpenseId === exp._id}
-                    >
-                      {deletingExpenseId === exp._id ? (
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500"></div>
-                      ) : (
-                        <FaTrash className="text-2xl" />
-                      )}
-                    </button>
+                  <td className="border border-gray-300 dark:border-gray-600 px-2 py-2">
+                    {permissions.canSeeActions && (
+                      <>
+                        <button
+                          className={`${
+                            deletingExpenseId
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-blue-500 hover:bg-blue-600"
+                          } text-white px-2 py-1 rounded mr-2 transition-colors`}
+                          onClick={() => {
+                            setEditingExpense(exp);
+                            setEditForm({
+                              amount: exp.amount,
+                              description: exp.description,
+                              category: exp.category,
+                              subcategory: exp.subcategory,
+                              paymentStatus: exp.paymentStatus,
+                              paymentMode: exp.paymentMode,
+                              file: null,
+                            });
+                            setEditModalOpen(true);
+                          }}
+                          disabled={deletingExpenseId}
+                        >
+                          <FaEdit className="text-2xl" />
+                        </button>
+                        <button
+                          className={`${
+                            deletingExpenseId === exp._id
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-red-500 hover:bg-red-600"
+                          } text-white px-2 py-1 rounded transition-colors`}
+                          onClick={() => {
+                            setConfirmModal({
+                              isOpen: true,
+                              type: "delete",
+                              title: "Delete Expense",
+                              message: `Are you sure you want to delete this expense of ₹${exp.amount}?`,
+                              onConfirm: () => handleDeleteExpense(exp),
+                              loading: false,
+                            });
+                          }}
+                          disabled={deletingExpenseId === exp._id}
+                        >
+                          {deletingExpenseId === exp._id ? (
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500"></div>
+                          ) : (
+                            <FaTrash className="text-2xl" />
+                          )}
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))
@@ -718,6 +776,30 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
           onSave={async (id, data) => {
             await updateExpense(id, data);
             setEditModal({ open: false, expense: null });
+            // Refresh data
+            if (storeMonth === 0) {
+              await getYearlyExpenseSummary(storeYear);
+            } else {
+              await getMonthlyExpenseData(storeMonth, storeYear);
+            }
+          }}
+        />
+      )}
+      
+      {/* Alternative Edit Modal */}
+      {editModalOpen && editingExpense && (
+        <EditExpenseModal
+          expense={editingExpense}
+          onClose={() => {
+            setEditModalOpen(false);
+            setEditingExpense(null);
+            setEditForm({});
+          }}
+          onSave={async (id, data) => {
+            await updateExpense(id, data);
+            setEditModalOpen(false);
+            setEditingExpense(null);
+            setEditForm({});
             // Refresh data
             if (storeMonth === 0) {
               await getYearlyExpenseSummary(storeYear);
@@ -963,6 +1045,13 @@ const EditExpenseModal = ({ expense, onClose, onSave }) => {
     fileName: ""
   });
   const fileInputRef = useRef(null);
+  const [isMounted, setIsMounted] = useState(true);
+
+  useEffect(() => {
+    return () => {
+      setIsMounted(false);
+    };
+  }, []);
 
   React.useEffect(() => {
     getExpenseCategories();

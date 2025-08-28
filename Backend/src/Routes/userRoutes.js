@@ -1,4 +1,6 @@
-import express from "express";
+import express from 'express';
+import { authenticateToken } from '../MIddlewares/authMiddleware.js';
+import { requireAdmin } from '../MIddlewares/roleMiddleware.js';
 import {
   getUsers,
   getUserById,
@@ -7,8 +9,10 @@ import {
   deleteUser,
   hardDeleteUser,
   toggleUserStatus,
-  getUsersByRole
-} from "../Controllers/userController.js";
+  getUsersByRole,
+  debugAllUsers,
+  cleanupSoftDeletedUsers
+} from '../Controllers/userController.js';
 import multer from "multer";
 import path from "path";
 
@@ -43,29 +47,35 @@ const upload = multer({
   }
 });
 
-// Routes
+// Routes - All protected with authentication and admin role
 // GET /api/users - Get all active users
-router.get("/", getUsers);
+router.get("/", authenticateToken, requireAdmin, getUsers);
 
 // GET /api/users/role/:role - Get users by role
-router.get("/role/:role", getUsersByRole);
+router.get("/role/:role", authenticateToken, requireAdmin, getUsersByRole);
 
 // GET /api/users/:id - Get single user by ID
-router.get("/:id", getUserById);
+router.get("/:id", authenticateToken, requireAdmin, getUserById);
 
 // POST /api/users - Create new user
-router.post("/", upload.single('profilePicture'), createUser);
+router.post("/", authenticateToken, requireAdmin, upload.single('profilePicture'), createUser);
 
 // PUT /api/users/:id - Update user
-router.put("/:id", upload.single('profilePicture'), updateUser);
+router.put("/:id", authenticateToken, requireAdmin, upload.single('profilePicture'), updateUser);
 
 // DELETE /api/users/:id - Soft delete user
-router.delete("/:id", deleteUser);
+router.delete("/:id", authenticateToken, requireAdmin, deleteUser);
 
-// DELETE /api/users/:id/hard - Hard delete user (permanent)
-router.delete("/:id/hard", hardDeleteUser);
+// DELETE /api/users/:id/hard - Hard delete user
+router.delete("/:id/hard", authenticateToken, requireAdmin, hardDeleteUser);
 
 // PATCH /api/users/:id/toggle-status - Toggle user active status
-router.patch("/:id/toggle-status", toggleUserStatus);
+router.patch("/:id/toggle-status", authenticateToken, requireAdmin, toggleUserStatus);
+
+// GET /api/users/debug - Debug endpoint to see all users in database
+router.get("/debug", authenticateToken, requireAdmin, debugAllUsers);
+
+// POST /api/users/cleanup - Clean up soft-deleted users (permanently remove them)
+router.post("/cleanup", authenticateToken, requireAdmin, cleanupSoftDeletedUsers);
 
 export default router;

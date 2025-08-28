@@ -94,7 +94,7 @@ const AddExpense = () => {
 
   return (
     <div
-      className={`flex justify-center items-start min-h-screen pt-16 sm:pt-20 md:pt-24 lg:pt-28 pb-8 px-4 add-expense-page ${
+      className={`flex justify-center items-start min-h-screen pt-16 sm:pt-16 mt-[42px] md:pt-24 lg:pt-28 pb-8 px-4 add-expense-page ${
         currentMode === "Dark" ? "bg-[#23272e]" : "bg-gray-100"
       } main-content-mobile`}
     >

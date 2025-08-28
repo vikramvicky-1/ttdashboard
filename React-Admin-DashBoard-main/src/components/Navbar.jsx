@@ -5,10 +5,14 @@ import { BsChatLeft } from "react-icons/bs";
 import { RiNotification3Line } from "react-icons/ri";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import { TooltipComponent } from "@syncfusion/ej2-react-popups";
-import { useStateContext } from "../contexts/ContextProvider";
-import { useLocation } from "react-router-dom";
+
 import avatar from "../data/avatar.jpg";
-import { UserProfile, DateRangeFilter } from ".";
+import { Cart, Chat, Notification, UserProfile } from ".";
+import { useStateContext } from "../contexts/ContextProvider";
+import { useRole } from "../contexts/RoleContext";
+import { useAuth } from "../contexts/AuthContext";
+import { useLocation } from "react-router-dom";
+import DateRangeFilter from "./DateRangeFilter";
 import useExpenseStore from "../Store/ExpenseStore";
 
 const months = [
@@ -63,6 +67,8 @@ const Navbar = () => {
     setScreenSize,
     screenSize,
   } = useStateContext();
+  const { permissions } = useRole();
+  const { user } = useAuth();
   const {
     selectedMonth,
     selectedYear,
@@ -74,7 +80,11 @@ const Navbar = () => {
   const profileRef = useRef(null);
 
   // Check if we're on management pages where date filters should be hidden
-  const isManagementPage = location.pathname === '/manage-categories' || location.pathname === '/manage-users';
+  const isManagementPage = location.pathname === '/manage-categories' || 
+                           location.pathname === '/manage-users' || 
+                           location.pathname === '/add-expense' || 
+                           location.pathname === '/daily-sale' ||
+                           !permissions.canSeeFilters;
   useEffect(() => {
     const handleResize = () => setScreenSize(window.innerWidth);
 
@@ -143,7 +153,7 @@ const Navbar = () => {
               >
                 <img
                   className="rounded-full w-7 h-7"
-                  src={avatar}
+                  src={user?.profilePicture ? `http://localhost:5000/uploads/${user.profilePicture}` : avatar}
                   alt="user-profile"
                 />
                 <MdKeyboardArrowDown className="text-gray-400 text-xs ml-1" />
@@ -210,13 +220,15 @@ const Navbar = () => {
                 </div>
               )}
 
-              {/* Date Range Filter - Same row on mobile */}
-              <div className="flex flex-row items-center gap-1 sm:gap-2 date-inputs-mobile flex-shrink-0">
-                <div className="text-xs text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
-                  Date Range:
+              {/* Date Range Filter - Hidden for Staff users */}
+              {user?.role !== 'staff' && (
+                <div className="flex flex-row items-center gap-1 sm:gap-2 date-inputs-mobile flex-shrink-0">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
+                    Date Range:
+                  </div>
+                  <DateRangeFilter isNavbar={true} />
                 </div>
-                <DateRangeFilter isNavbar={true} />
-              </div>
+              )}
             </>
           )}
         </div>
@@ -233,13 +245,13 @@ const Navbar = () => {
             >
               <img
                 className="rounded-full w-7 h-7 sm:w-8 sm:h-8"
-                src={avatar}
+                src={user?.profilePicture ? `http://localhost:5000/uploads/${user.profilePicture}` : avatar}
                 alt="user-profile"
               />
               <p>
                 <span className="text-gray-400 text-14">Hi,</span>{" "}
                 <span className="text-gray-400 font-bold ml-1 text-14">
-                  Michael
+                  {user?.name || 'User'}
                 </span>
               </p>
               <MdKeyboardArrowDown className="text-gray-400 text-14" />

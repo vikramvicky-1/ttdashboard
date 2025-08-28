@@ -3,6 +3,7 @@ import Category from "../Models/categoryModel.js";
 // Get all categories with subcategories
 export const getCategories = async (req, res) => {
   try {
+    console.log('🔍 getCategories called');
     const categories = await Category.find({});
     
     // Transform to the expected format
@@ -24,6 +25,7 @@ export const getCategories = async (req, res) => {
 // Add new category
 export const addCategory = async (req, res) => {
   try {
+    console.log('➕ addCategory called with body:', req.body);
     const { categoryName } = req.body;
 
     if (!categoryName || !categoryName.trim()) {
@@ -56,6 +58,7 @@ export const addCategory = async (req, res) => {
 // Update category name
 export const updateCategory = async (req, res) => {
   try {
+    console.log('✏️ updateCategory called with params:', req.params, 'body:', req.body);
     const { categoryName } = req.params;
     const { newCategoryName } = req.body;
 
@@ -94,6 +97,7 @@ export const updateCategory = async (req, res) => {
 // Delete category
 export const deleteCategory = async (req, res) => {
   try {
+    console.log('🗑️ deleteCategory called with params:', req.params);
     const { categoryName } = req.params;
 
     const category = await Category.findOneAndDelete({ name: categoryName });
@@ -114,6 +118,7 @@ export const deleteCategory = async (req, res) => {
 // Add subcategory
 export const addSubCategory = async (req, res) => {
   try {
+    console.log('➕ addSubCategory called with body:', req.body);
     const { categoryName, subCategoryName } = req.body;
 
     if (!categoryName || !subCategoryName || !subCategoryName.trim()) {
@@ -146,6 +151,7 @@ export const addSubCategory = async (req, res) => {
 // Update subcategory
 export const updateSubCategory = async (req, res) => {
   try {
+    console.log('✏️ updateSubCategory called with params:', req.params, 'body:', req.body);
     const { categoryName, subCategoryName } = req.params;
     const { newSubCategoryName } = req.body;
 
@@ -181,9 +187,45 @@ export const updateSubCategory = async (req, res) => {
   }
 };
 
+// Get subcategories for a specific category
+export const getSubCategories = async (req, res) => {
+  try {
+    console.log('📋 getSubCategories called with params:', req.params);
+    const { categoryName } = req.params;
+
+    if (categoryName) {
+      // Get subcategories for a specific category
+      const category = await Category.findOne({ name: categoryName });
+      if (!category) {
+        return res.status(404).json({ error: "Category not found" });
+      }
+      
+      res.status(200).json({
+        subcategories: category.subCategories || []
+      });
+    } else {
+      // Get all subcategories from all categories
+      const categories = await Category.find({});
+      const allSubCategories = {};
+      
+      categories.forEach(category => {
+        allSubCategories[category.name] = category.subCategories || [];
+      });
+
+      res.status(200).json({
+        subcategories: allSubCategories
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching subcategories:", error);
+    res.status(500).json({ error: "Failed to fetch subcategories" });
+  }
+};
+
 // Delete subcategory
 export const deleteSubCategory = async (req, res) => {
   try {
+    console.log('🗑️ deleteSubCategory called with params:', req.params);
     const { categoryName, subCategoryName } = req.params;
 
     const category = await Category.findOne({ name: categoryName });

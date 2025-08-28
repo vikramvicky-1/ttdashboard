@@ -1,15 +1,34 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from 'react';
 import { useStateContext } from "../contexts/ContextProvider";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { toast } from 'react-toastify';
+import { AiOutlineEye, AiOutlineEyeInvisible } from 'react-icons/ai';
+import axiosInstance from "../Library/Axios";
 
 const Login = () => {
   const { currentMode } = useStateContext();
   const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    let isMounted = true;
+    
+    if (isAuthenticated && isMounted) {
+      navigate('/');
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -22,16 +41,29 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    
 
-    // TODO: Implement login logic here
-    console.log("Login attempt:", formData);
-
-    // Simulate login process
-    setTimeout(() => {
+    try {
+      
+      // Use AuthContext login method instead of direct API call
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        toast.success("Login successful! Redirecting...");
+        
+        // Navigate to dashboard - no need to reload page
+        setTimeout(() => {
+          navigate('/');
+        }, 1000);
+      } else {
+        toast.error(result.error || "Login failed. Please try again.");
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "Login failed. Please try again.";
+      toast.error(errorMessage);
+    } finally {
       setLoading(false);
-      // For now, just navigate to dashboard
-      navigate("/dashboard");
-    }, 1000);
+    }
   };
 
   return (
@@ -49,20 +81,12 @@ const Login = () => {
       >
         {/* Logo Section */}
         <div className="text-center">
-          <div className="mx-auto h-20 w-20 bg-blue-600 rounded-full flex items-center justify-center mb-4">
-            <svg
-              className="h-12 w-12 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+          <div className="mx-auto h-20 w-20 mb-4">
+            <img 
+              src="/dashboard.png" 
+              alt="Dashboard Logo" 
+              className="h-20 w-20 rounded-full object-cover"
+            />
           </div>
           <h2
             className={`text-3xl font-bold ${
@@ -119,20 +143,35 @@ const Login = () => {
               >
                 Password
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                className={`mt-1 block w-full px-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 ${
-                  currentMode === "Dark"
-                    ? "bg-[#23272e] text-gray-200 border-gray-600 placeholder-gray-500"
-                    : "bg-white text-gray-900 border-gray-300 placeholder-gray-400"
-                }`}
-                placeholder="Enter your password"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  className={`mt-1 block w-full px-3 py-3 pr-10 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 ${
+                    currentMode === "Dark"
+                      ? "bg-[#23272e] text-gray-200 border-gray-600 placeholder-gray-500"
+                      : "bg-white text-gray-900 border-gray-300 placeholder-gray-400"
+                  }`}
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  className={`absolute inset-y-0 right-0 pr-3 flex items-center ${
+                    currentMode === "Dark" ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"
+                  }`}
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <AiOutlineEyeInvisible className="h-5 w-5" />
+                  ) : (
+                    <AiOutlineEye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -156,6 +195,7 @@ const Login = () => {
             </button>
           </div>
 
+
           {/* Additional Info */}
           <div className="text-center">
             <p
@@ -163,7 +203,7 @@ const Login = () => {
                 currentMode === "Dark" ? "text-gray-400" : "text-gray-600"
               }`}
             >
-              Demo: Use any email and password to proceed
+              Please enter your credentials to access the dashboard
             </p>
           </div>
         </form>

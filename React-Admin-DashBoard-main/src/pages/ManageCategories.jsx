@@ -44,6 +44,7 @@ const ManageCategories = () => {
   };
 
   const handleAddCategory = async () => {
+    console.log('🔵 handleAddCategory called with:', newCategoryName);
     if (!newCategoryName.trim()) {
       toast.error("Category name cannot be empty");
       return;
@@ -55,6 +56,7 @@ const ManageCategories = () => {
     }
 
     try {
+      console.log('🔵 Making API call to add category:', newCategoryName);
       // API call to add category
       const response = await axiosInstance.post('/categories', {
         categoryName: newCategoryName
@@ -87,14 +89,13 @@ const ManageCategories = () => {
 
     try {
       await axiosInstance.put(`/categories/${encodeURIComponent(oldCategoryName)}`, {
-        name: newName
+        newCategoryName: newName
       });
       toast.success('Category updated successfully');
       setEditingCategory(null);
       getExpenseCategories();
     } catch (error) {
       toast.error('Failed to update category');
-      console.error('Error updating category:', error);
     }
   };
 
@@ -111,15 +112,14 @@ const ManageCategories = () => {
     }
 
     try {
-      await axiosInstance.put(`/subcategories/${encodeURIComponent(categoryName)}/${encodeURIComponent(oldSubCategoryName)}`, {
-        name: newName
+      await axiosInstance.put(`/categories/subcategories/${encodeURIComponent(categoryName)}/${encodeURIComponent(oldSubCategoryName)}`, {
+        newSubCategoryName: newName
       });
       toast.success('Subcategory updated successfully');
       setEditingSubCategory(null);
       getExpenseCategories();
     } catch (error) {
       toast.error('Failed to update subcategory');
-      console.error('Error updating subcategory:', error);
     }
   };
 
@@ -143,7 +143,6 @@ const ManageCategories = () => {
       setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
     } catch (error) {
       toast.error('Failed to delete category');
-      console.error('Error deleting category:', error);
       setConfirmModal(prev => ({ ...prev, loading: false }));
     }
   };
@@ -190,7 +189,7 @@ const ManageCategories = () => {
     }
 
     try {
-      await axiosInstance.post('/subcategories', {
+      await axiosInstance.post('/categories/subcategories', {
         categoryName, 
         subCategoryName: newSubCategoryName 
       });
@@ -222,13 +221,12 @@ const ManageCategories = () => {
   const confirmDeleteSubCategory = async (categoryName, subCategoryName) => {
     setConfirmModal(prev => ({ ...prev, loading: true }));
     try {
-      await axiosInstance.delete(`/subcategories/${encodeURIComponent(categoryName)}/${encodeURIComponent(subCategoryName)}`);
+      await axiosInstance.delete(`/categories/subcategories/${encodeURIComponent(categoryName)}/${encodeURIComponent(subCategoryName)}`);
       toast.success('Subcategory deleted successfully');
       getExpenseCategories();
       setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
     } catch (error) {
       toast.error('Failed to delete subcategory');
-      console.error('Error deleting subcategory:', error);
       setConfirmModal(prev => ({ ...prev, loading: false }));
     }
   };
@@ -245,7 +243,7 @@ const ManageCategories = () => {
     }
 
     try {
-      await axiosInstance.put(`/subcategories/${encodeURIComponent(categoryName)}/${encodeURIComponent(oldSubName)}`, {
+      await axiosInstance.put(`/categories/subcategories/${encodeURIComponent(categoryName)}/${encodeURIComponent(oldSubName)}`, {
         newSubCategoryName: newSubName
       });
 

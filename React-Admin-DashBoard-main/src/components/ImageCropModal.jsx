@@ -72,7 +72,6 @@ const ImageCropModal = ({ isOpen, onClose, onCropComplete, imageFile }) => {
       onCropComplete(croppedImage);
       onClose();
     } catch (error) {
-      console.error('Error cropping image:', error);
     }
   }, [imageUrl, croppedAreaPixels, rotation, onCropComplete, onClose]);
 

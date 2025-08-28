@@ -48,7 +48,6 @@ const ManageUsers = () => {
       const response = await axiosInstance.get("/users");
       setUsers(response.data.users || []);
     } catch (error) {
-      console.error("Error fetching users:", error);
       toast.error("Failed to fetch users");
     } finally {
       setLoading(false);
@@ -138,7 +137,6 @@ const ManageUsers = () => {
       await fetchUsers();
       resetForm();
     } catch (error) {
-      console.error("Error adding user:", error);
       toast.error(error.response?.data?.message || "Failed to add user");
     } finally {
       setIsSubmitting(false);
@@ -158,7 +156,7 @@ const ManageUsers = () => {
     if (user.profilePicture) {
       const imageUrl = user.profilePicture.startsWith('http') 
         ? user.profilePicture 
-        : `${BACKEND_URL}/uploads/${user.profilePicture}`;
+        : `http://localhost:5000/uploads/${user.profilePicture}`;
       setPreviewImage(imageUrl);
     } else {
       setPreviewImage(null);
@@ -201,7 +199,6 @@ const ManageUsers = () => {
       await fetchUsers();
       resetForm();
     } catch (error) {
-      console.error("Error updating user:", error);
       toast.error(error.response?.data?.message || "Failed to update user");
     } finally {
       setIsSubmitting(false);
@@ -222,8 +219,14 @@ const ManageUsers = () => {
           fetchUsers();
           setConfirmModal({ isOpen: false, type: null, title: "", message: "", onConfirm: null, loading: false });
         } catch (error) {
-          console.error("Error deleting user:", error);
-          toast.error("Failed to delete user");
+          
+          // Check if it's the last admin protection error
+          if (error.response?.status === 400 && error.response?.data?.message?.includes("last administrator")) {
+            toast.error("Cannot delete the last administrator. At least one administrator must remain in the system.");
+          } else {
+            toast.error(error.response?.data?.message || "Failed to delete user");
+          }
+          
           setConfirmModal(prev => ({ ...prev, loading: false }));
         }
       },
@@ -457,10 +460,9 @@ const ManageUsers = () => {
                             <>
                               <img
                                 className="h-10 w-10 rounded-full object-cover"
-                                src={`${BACKEND_URL}/uploads/${user.profilePicture}`}
+                                src={`http://localhost:5000/uploads/${user.profilePicture}`}
                                 alt={user.name}
                                 onError={(e) => {
-                                  console.log('Image failed to load:', e.target.src);
                                   e.target.style.display = 'none';
                                   e.target.nextElementSibling.style.display = 'flex';
                                 }}

@@ -155,10 +155,8 @@ const useExpenseStore = create((set, get) => ({
       const response = await axiosInstance.get(`/expense/monthly-expense`, {
         params: { month, year },
       });
-      console.log("Monthly expense response:", response.data);
       set({ monthlyExpense: response.data.monthlyExpense || 0, loading: false });
     } catch (error) {
-      console.error("Error fetching monthly expense:", error);
       set({ monthlyExpense: 0, loading: false });
       throw error;
     }
@@ -170,10 +168,8 @@ const useExpenseStore = create((set, get) => ({
       const response = await axiosInstance.get(`/expense/loans-expense`, {
         params: { month, year },
       });
-      console.log("Loans expense response:", response.data);
       set({ totalLoansExpense: response.data.totalLoansExpense || 0, loading: false });
     } catch (error) {
-      console.error("Error fetching loans totals:", error);
       set({ totalLoansExpense: 0, loading: false });
       throw error;
     }
@@ -197,7 +193,6 @@ const useExpenseStore = create((set, get) => ({
       set({ monthlyExpense: response.data.totalMonthlyExpense });
       set({ loading: false });
     } catch (error) {
-      console.error("Error fetching expense pie chart data:", error);
       set({ loading: false });
       throw error;
     }
@@ -210,7 +205,6 @@ const useExpenseStore = create((set, get) => ({
         params: { year } 
       });
       
-      console.log("Yearly expense summary response:", summaryResponse.data);
       
       // Format pie chart data for consistency
       const pieChartData = summaryResponse.data.expensePieChartData?.map((item) => ({
@@ -220,7 +214,6 @@ const useExpenseStore = create((set, get) => ({
       })) || [];
       
       // Collect all expenses from monthly data for table
-      console.log("Collecting monthly data for yearly table...");
       const allExpenses = [];
       const allCategories = new Set();
       
@@ -237,11 +230,9 @@ const useExpenseStore = create((set, get) => ({
             monthResponse.data.categories.forEach(cat => allCategories.add(cat));
           }
         } catch (monthError) {
-          console.log(`No data for month ${month}`);
         }
       }
       
-      console.log(`Collected ${allExpenses.length} expenses from all months for table`);
       
       set({
         yearlyExpenseSummary: {
@@ -254,15 +245,7 @@ const useExpenseStore = create((set, get) => ({
         loading: false,
       });
       
-      console.log("Final yearly summary stored:", {
-        totalYearlyExpense: summaryResponse.data.totalYearlyExpense,
-        totalLoansExpense: summaryResponse.data.totalLoansExpense,
-        pieChartDataLength: pieChartData.length,
-        expensesCount: allExpenses.length,
-        categoriesCount: Array.from(allCategories).length,
-      });
     } catch (error) {
-      console.error("Error fetching yearly expense summary:", error);
       set({ loading: false });
       throw error;
     }
@@ -279,7 +262,6 @@ const useExpenseStore = create((set, get) => ({
       );
       set({ monthlyExpenseData: response.data, loading: false });
     } catch (error) {
-      console.error("Error fetching monthly expense data:", error);
       set({ loading: false });
       throw error;
     }
@@ -292,7 +274,6 @@ const useExpenseStore = create((set, get) => ({
         categorySubMap: response.data.categorySubMap,
       });
     } catch (error) {
-      console.error("Error fetching categories:", error);
       set({ categories: [], categorySubMap: {} });
     }
   },
@@ -319,6 +300,8 @@ const useExpenseStore = create((set, get) => ({
         config
       );
       toast.success("Expense added successfully!");
+      // Trigger data refresh for real-time updates
+      get().triggerDataRefresh();
       return response.data;
     } catch (error) {
       toast.error(
@@ -332,6 +315,8 @@ const useExpenseStore = create((set, get) => ({
     try {
       await axiosInstance.delete(`/expense/delete-expense/${id}`);
       toast.success("Expense deleted successfully!");
+      // Trigger data refresh for real-time updates
+      get().triggerDataRefresh();
     } catch (error) {
       toast.error(
         error?.response?.data?.error ||
@@ -362,9 +347,10 @@ const useExpenseStore = create((set, get) => ({
         config
       );
       toast.success("Expense updated successfully!");
+      // Trigger data refresh for real-time updates
+      get().triggerDataRefresh();
       return response.data;
     } catch (error) {
-      console.error("Update expense error details:", error);
       const errorMessage =
         error?.response?.data?.error ||
         error?.message ||
@@ -382,7 +368,6 @@ const useExpenseStore = create((set, get) => ({
       });
       set({ monthlyExpense: response.data.totalExpense, loading: false });
     } catch (error) {
-      console.error("Error fetching date range expense:", error);
       set({ loading: false });
       throw error;
     }
@@ -401,7 +386,6 @@ const useExpenseStore = create((set, get) => ({
         loading: false,
       });
     } catch (error) {
-      console.error("Error fetching date range loans expense:", error);
       set({ loading: false });
       throw error;
     }
@@ -426,7 +410,6 @@ const useExpenseStore = create((set, get) => ({
         loading: false,
       });
     } catch (error) {
-      console.error("Error fetching date range pie chart data:", error);
       set({ loading: false });
       throw error;
     }
@@ -442,7 +425,6 @@ const useExpenseStore = create((set, get) => ({
       );
       set({ monthlyExpenseData: response.data, loading: false });
     } catch (error) {
-      console.error("Error fetching date range expense data:", error);
       set({ loading: false });
       throw error;
     }

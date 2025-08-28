@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useStateContext } from "../contexts/ContextProvider";
+import { useRole } from "../contexts/RoleContext";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { MdOutlineCancel } from "react-icons/md";
 import { SiShopware } from "react-icons/si";
@@ -12,6 +13,7 @@ import { links } from "../data/dummy";
 const Sidebar = () => {
   const { currentColor, setActiveMenu, activeMenu, screenSize } =
     useStateContext();
+  const { permissions } = useRole();
   const sidebarRef = useRef(null);
   const location = useLocation();
 
@@ -80,45 +82,57 @@ const Sidebar = () => {
                 <p className="text-gray-400 dark:text-gray-400 m-3 mt-4 uppercase">
                   {item.title}
                 </p>
-                {item.links.map((link) => (
-                  <NavLink
-                    to={`/${link.linkTo}`}
-                    key={link.name}
-                    onClick={handleCloseSidebar}
-                    style={({ isActive }) => ({
-                      backgroundColor: isActive ? currentColor : "",
-                    })}
-                    className={({ isActive }) =>
-                      isActive ? activeLink : normalLink
-                    }
-                  >
-                    {link.icon}
-                    <span className="capitalize">{link.name}</span>
-                  </NavLink>
-                ))}
+                {item.links.map((link) => {
+                  // Role-based visibility logic
+                  if (link.linkTo === 'expenses' && !permissions.canViewExpenseData) return null;
+                  if (link.linkTo === 'sales-data' && !permissions.canViewSalesData) return null;
+                  if (link.linkTo === 'manage-categories' && !permissions.canManageCategories) return null;
+                  if (link.linkTo === 'manage-users' && !permissions.canManageUsers) return null;
+                  
+                  return (
+                    <NavLink
+                      to={`/${link.linkTo}`}
+                      key={link.name}
+                      onClick={handleCloseSidebar}
+                      style={({ isActive }) => ({
+                        backgroundColor: isActive ? currentColor : "",
+                      })}
+                      className={({ isActive }) =>
+                        isActive ? activeLink : normalLink
+                      }
+                    >
+                      {link.icon}
+                      <span className="capitalize">{link.name}</span>
+                    </NavLink>
+                  );
+                })}
               </div>
             ))}
           </div>
           {/* Action buttons at the bottom */}
           <div className="mb-4 flex flex-col gap-2 px-4">
-            <Link
-              to="/add-expense"
-              onClick={handleCloseSidebar}
-              className="flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-white shadow-lg"
-              style={{ background: currentColor }}
-            >
-              <AiOutlinePlusCircle className="text-xl" />
-              <span>Add Expense</span>
-            </Link>
-            <Link
-              to="/daily-sale"
-              onClick={handleCloseSidebar}
-              className="flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-white shadow-lg"
-              style={{ background: currentColor }}
-            >
-              <AiOutlinePlusCircle className="text-xl" />
-              <span>Add Sale</span>
-            </Link>
+            {permissions.canAddExpense && (
+              <Link
+                to="/add-expense"
+                onClick={handleCloseSidebar}
+                className="flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-white shadow-lg"
+                style={{ background: currentColor }}
+              >
+                <AiOutlinePlusCircle className="text-xl" />
+                <span>Add Expense</span>
+              </Link>
+            )}
+            {permissions.canAddSale && (
+              <Link
+                to="/daily-sale"
+                onClick={handleCloseSidebar}
+                className="flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-white shadow-lg"
+                style={{ background: currentColor }}
+              >
+                <AiOutlinePlusCircle className="text-xl" />
+                <span>Add Sale</span>
+              </Link>
+            )}
           </div>
         </>
       )}

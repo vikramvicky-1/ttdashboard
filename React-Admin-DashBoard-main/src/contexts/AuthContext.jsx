@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axiosInstance from '../Library/Axios';
-import { toast } from 'react-toastify';
 
 const AuthContext = createContext();
 
@@ -17,6 +16,24 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  
+  // Clear localStorage on app start if corrupted
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    
+    if (token && !storedUser) {
+      // Token exists but no user data - clear everything
+      localStorage.removeItem('token');
+    }
+    
+    if (storedUser && !token) {
+      // User data exists but no token - clear everything
+      localStorage.removeItem('user');
+    }
+  }, []);
+
   // Role hierarchy for permission checking
   const roleHierarchy = {
     admin: 3,
@@ -26,24 +43,53 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check if user is logged in on app start
-    checkAuthStatus();
+    const token = localStorage.getItem('token');
+    if (token) {
+      // Set token in axios headers immediately
+      axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // Add a small delay to ensure localStorage operations are complete
+    setTimeout(() => {
+      checkAuthStatus();
+    }, 100);
   }, []);
 
   const checkAuthStatus = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        // Verify token with backend (you would implement this endpoint)
-        // For now, we'll simulate with stored user data
-        const userData = localStorage.getItem('userData');
-        if (userData) {
-          const parsedUser = JSON.parse(userData);
-          setUser(parsedUser);
+      const token = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+      
+      
+      if (token && storedUser) {
+        // Set user from localStorage first for immediate auth
+        try {
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
           setIsAuthenticated(true);
+        } catch (parseError) {
+          logout();
+          return;
         }
+        
+        // Then verify token with backend
+        try {
+          const response = await axiosInstance.get('/auth/me');
+          
+          if (response.data.success) {
+            setUser(response.data.user);
+            setIsAuthenticated(true);
+          } else {
+            logout();
+          }
+        } catch (verifyError) {
+          logout();
+        }
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
       logout();
     } finally {
       setLoading(false);
@@ -52,36 +98,36 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      // This would be replaced with actual login API call
-      // For demo purposes, we'll simulate login
-      const mockUser = {
-        _id: '1',
-        name: 'Admin User',
-        email: email,
-        role: 'admin',
-        profilePicture: null
-      };
-
-      localStorage.setItem('authToken', 'mock-token');
-      localStorage.setItem('userData', JSON.stringify(mockUser));
+      const response = await axiosInstance.post('/auth/login', { email, password });
       
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      
-      toast.success('Login successful');
-      return { success: true };
+      if (response.data.success) {
+        const { token, user } = response.data;
+        
+        // Store token and set axios header
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        // Update state immediately
+        setUser(user);
+        setIsAuthenticated(true);
+        setLoading(false);
+        
+        return { success: true, user, token };
+      } else {
+        return { success: false, error: response.data.message || 'Login failed' };
+      }
     } catch (error) {
-      toast.error('Login failed');
-      return { success: false, error: error.message };
+      return { success: false, error: error.response?.data?.message || error.message };
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    delete axiosInstance.defaults.headers.common['Authorization'];
     setUser(null);
     setIsAuthenticated(false);
-    toast.info('Logged out successfully');
   };
 
   const hasPermission = (requiredRole) => {
@@ -119,14 +165,14 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     login,
     logout,
-    hasPermission,
-    canManageUsers,
-    canManageCategories,
-    canViewReports,
-    canAddExpenses,
-    canAddSales,
-    roleHierarchy
+    checkAuthStatus,
+    roleHierarchy,
+    hasRole: (requiredRole) => {
+      if (!user || !user.role) return false;
+      return roleHierarchy[user.role] >= roleHierarchy[requiredRole];
+    }
   };
+
 
   return (
     <AuthContext.Provider value={value}>
