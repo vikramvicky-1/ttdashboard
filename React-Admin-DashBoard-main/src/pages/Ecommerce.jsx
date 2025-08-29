@@ -261,13 +261,10 @@ const Ecommerce = () => {
                   title={`DAILY SALES & ORDERS - Total: ₹${dailySalesTotal ? Number(dailySalesTotal).toLocaleString("en-IN") : "0"}`} 
                 />
                 <div 
-                  className="w-full chart-container" 
+                  className="w-full chart-container relative" 
                   style={{ 
                     scrollbarWidth: "none", 
-                    msOverflowStyle: "none",
-                    WebkitOverflowScrolling: "touch",
-                    overflowX: "auto",
-                    overflowY: "hidden"
+                    msOverflowStyle: "none"
                   }}
                 >
                   <style>{`
@@ -275,15 +272,10 @@ const Ecommerce = () => {
                       display: none;
                     }
                     
-                    .chart-container {
-                      -webkit-overflow-scrolling: touch;
-                      scroll-behavior: smooth;
-                    }
-                    
                     /* Desktop - no scroll, fit to container */
                     @media (min-width: 1024px) {
                       .chart-container {
-                        overflow-x: visible !important;
+                        overflow: visible;
                       }
                       .chart-inner {
                         width: 100% !important;
@@ -291,20 +283,63 @@ const Ecommerce = () => {
                       }
                     }
                     
-                    /* Mobile/Tablet - enable horizontal scroll */
+                    /* Mobile/Tablet - enable horizontal scroll with proper touch handling */
                     @media (max-width: 1023px) {
                       .chart-container {
-                        overflow-x: auto !important;
-                        overflow-y: hidden !important;
-                        touch-action: pan-x pan-y;
+                        overflow-x: scroll;
+                        overflow-y: visible;
+                        -webkit-overflow-scrolling: touch;
+                        scroll-behavior: smooth;
+                        touch-action: pan-x;
+                        position: relative;
+                        z-index: 1;
+                        height: 420px;
                       }
                       .chart-inner {
-                        min-width: 1200px !important;
-                        width: 1200px !important;
+                        min-width: 1600px !important;
+                        width: 1600px !important;
+                        height: 400px;
+                        position: relative;
+                      }
+                      
+                      /* Allow page scroll when touching outside chart bars */
+                      .chart-container {
+                        isolation: isolate;
+                      }
+                      
+                      /* Specific handling for chart elements */
+                      .chart-container .e-chart {
+                        touch-action: pan-x;
+                      }
+                      
+                      /* Allow vertical scroll on chart background but horizontal on bars */
+                      .chart-container svg {
+                        touch-action: pan-x;
                       }
                     }
                   `}</style>
-                  <div className="chart-inner" style={{ width: "100%", height: "400px" }}>
+                  <div 
+                    className="chart-inner" 
+                    style={{ width: "100%", height: "400px" }}
+                    onTouchStart={(e) => {
+                      // Allow horizontal scroll on chart, vertical scroll on page
+                      const touch = e.touches[0];
+                      e.currentTarget.startX = touch.clientX;
+                      e.currentTarget.startY = touch.clientY;
+                    }}
+                    onTouchMove={(e) => {
+                      if (!e.currentTarget.startX || !e.currentTarget.startY) return;
+                      
+                      const touch = e.touches[0];
+                      const deltaX = Math.abs(touch.clientX - e.currentTarget.startX);
+                      const deltaY = Math.abs(touch.clientY - e.currentTarget.startY);
+                      
+                      // If horizontal movement is greater, prevent page scroll
+                      if (deltaX > deltaY) {
+                        e.stopPropagation();
+                      }
+                    }}
+                  >
                     <ChartComponent
                       id="DailySalesChart"
                       primaryXAxis={{
