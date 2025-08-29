@@ -2,9 +2,10 @@
   "name": "tt-dashboard-backend",
   "version": "1.0.0",
   "type": "module",
-  "main": "server.js",
+  "main": "Backend/server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "cd Backend && node server.js",
+    "build": "cd Backend && npm install"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
