@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FiPlus, FiEdit2, FiTrash2, FiSave, FiX, FiUsers, FiUpload, FiEye, FiEyeOff } from "react-icons/fi";
 import { MdEmail, MdPerson, MdLock, MdAdminPanelSettings } from "react-icons/md";
-import axiosInstance from "../Library/Axios";
+import axiosInstance, { getImageBaseUrl } from "../Library/Axios";
 import { toast } from "react-toastify";
 import { ConfirmationModal } from "../components";
 
@@ -153,10 +153,12 @@ const ManageUsers = () => {
       profilePicture: null
     });
     // Set preview image for existing user profile picture
-    if (user.profilePicture) {
+    if (user.profilePictureUrl) {
+      setPreviewImage(user.profilePictureUrl);
+    } else if (user.profilePicture) {
       const imageUrl = user.profilePicture.startsWith('http') 
         ? user.profilePicture 
-        : `http://localhost:5000/uploads/${user.profilePicture}`;
+        : `${getImageBaseUrl()}/uploads/${user.profilePicture}`;
       setPreviewImage(imageUrl);
     } else {
       setPreviewImage(null);
@@ -460,7 +462,7 @@ const ManageUsers = () => {
                             <>
                               <img
                                 className="h-10 w-10 rounded-full object-cover"
-                                src={`http://localhost:5000/uploads/${user.profilePicture}`}
+                                src={user.profilePictureUrl || `${getImageBaseUrl()}/uploads/${user.profilePicture}`}
                                 alt={user.name}
                                 onError={(e) => {
                                   e.target.style.display = 'none';

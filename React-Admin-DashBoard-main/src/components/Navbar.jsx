@@ -9,6 +9,7 @@ import { TooltipComponent } from "@syncfusion/ej2-react-popups";
 import avatar from "../data/avatar.jpg";
 import { Cart, Chat, Notification, UserProfile } from ".";
 import { useStateContext } from "../contexts/ContextProvider";
+import { getImageBaseUrl } from "../Library/Axios";
 import { useRole } from "../contexts/RoleContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useLocation } from "react-router-dom";
@@ -153,7 +154,7 @@ const Navbar = () => {
               >
                 <img
                   className="rounded-full w-7 h-7"
-                  src={user?.profilePicture ? `http://localhost:5000/uploads/${user.profilePicture}` : avatar}
+                  src={user?.profilePictureUrl || (user?.profilePicture ? `${getImageBaseUrl()}/uploads/${user.profilePicture}` : avatar)}
                   alt="user-profile"
                 />
                 <MdKeyboardArrowDown className="text-gray-400 text-xs ml-1" />
@@ -245,7 +246,7 @@ const Navbar = () => {
             >
               <img
                 className="rounded-full w-7 h-7 sm:w-8 sm:h-8"
-                src={user?.profilePicture ? `http://localhost:5000/uploads/${user.profilePicture}` : avatar}
+                src={user?.profilePictureUrl || (user?.profilePicture ? `${getImageBaseUrl()}/uploads/${user.profilePicture}` : avatar)}
                 alt="user-profile"
               />
               <p>

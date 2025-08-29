@@ -6,6 +6,11 @@ const axiosInstance = axios.create({
   baseURL: "https://ttdashboard04.onrender.com/api",
 });
 
+// Export base URL for image uploads (without /api)
+export const getImageBaseUrl = () => {
+  return axiosInstance.defaults.baseURL.replace('/api', '');
+};
+
 // Add request interceptor to include auth token
 axiosInstance.interceptors.request.use(
   (config) => {
