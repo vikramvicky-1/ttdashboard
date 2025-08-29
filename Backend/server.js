@@ -62,7 +62,7 @@ app.use("/api/users", userRoutes);
 
 // Basic route
 app.get("/", (req, res) => {
-  res.json({ message: "TT Dashboard API is running!" });
+  res.json({ message: "T Dashboard API is running!" });
 });
 
 // 404 fallback
