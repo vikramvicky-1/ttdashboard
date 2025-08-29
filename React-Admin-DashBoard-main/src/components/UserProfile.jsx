@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import avatar from "../data/avatar.jpg";
 import Settings from "./Settings";
+import { getImageBaseUrl } from "../Library/Axios";
 
 const UserProfile = () => {
   const { currentColor, setIsClicked, isClicked } = useStateContext();
@@ -49,7 +50,7 @@ const UserProfile = () => {
           <div className="flex gap-3 sm:gap-5 items-center mt-4 sm:mt-6 border-color border-b-1 pb-4 sm:pb-6">
             <img
               className="rounded-full h-16 w-16 sm:h-24 sm:w-24"
-              src={user?.profilePicture ? `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/uploads/${user.profilePicture}` : avatar}
+              src={user?.profilePictureUrl || (user?.profilePicture ? `${getImageBaseUrl()}/uploads/${user.profilePicture}` : avatar)}
               alt="user-profile"
             />
             <div className="min-w-0 flex-1">

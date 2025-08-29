@@ -265,7 +265,9 @@ const Ecommerce = () => {
                   style={{ 
                     scrollbarWidth: "none", 
                     msOverflowStyle: "none",
-                    WebkitOverflowScrolling: "touch"
+                    WebkitOverflowScrolling: "touch",
+                    overflowX: "auto",
+                    overflowY: "hidden"
                   }}
                 >
                   <style>{`
@@ -273,10 +275,15 @@ const Ecommerce = () => {
                       display: none;
                     }
                     
+                    .chart-container {
+                      -webkit-overflow-scrolling: touch;
+                      scroll-behavior: smooth;
+                    }
+                    
                     /* Desktop - no scroll, fit to container */
                     @media (min-width: 1024px) {
                       .chart-container {
-                        overflow-x: visible;
+                        overflow-x: visible !important;
                       }
                       .chart-inner {
                         width: 100% !important;
@@ -287,10 +294,13 @@ const Ecommerce = () => {
                     /* Mobile/Tablet - enable horizontal scroll */
                     @media (max-width: 1023px) {
                       .chart-container {
-                        overflow-x: auto;
+                        overflow-x: auto !important;
+                        overflow-y: hidden !important;
+                        touch-action: pan-x pan-y;
                       }
                       .chart-inner {
                         min-width: 1200px !important;
+                        width: 1200px !important;
                       }
                     }
                   `}</style>
