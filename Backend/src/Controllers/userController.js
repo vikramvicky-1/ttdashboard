@@ -10,10 +10,23 @@ export const getUsers = async (req, res) => {
       .select('-password')
       .sort({ createdAt: -1 });
     
+    // Add full URL for profile pictures
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? `https://${req.get('host')}` 
+      : `http://localhost:${process.env.PORT || 5000}`;
+    
+    const usersWithUrls = users.map(user => {
+      const userObj = user.toJSON();
+      if (userObj.profilePicture) {
+        userObj.profilePictureUrl = `${baseUrl}/uploads/${userObj.profilePicture}`;
+      }
+      return userObj;
+    });
+    
     res.status(200).json({
       success: true,
-      users,
-      count: users.length
+      users: usersWithUrls,
+      count: usersWithUrls.length
     });
   } catch (error) {
     console.error("Error fetching users:", error);
@@ -89,6 +102,14 @@ export const createUser = async (req, res) => {
     
     // Return user without password
     const userResponse = user.toJSON();
+    
+    // Add full URL for profile picture if it exists
+    if (userResponse.profilePicture) {
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? `https://${req.get('host')}` 
+        : `http://localhost:${process.env.PORT || 5000}`;
+      userResponse.profilePictureUrl = `${baseUrl}/uploads/${userResponse.profilePicture}`;
+    }
     
     res.status(201).json({
       success: true,
@@ -196,10 +217,19 @@ export const updateUser = async (req, res) => {
       { new: true, runValidators: true }
     ).select('-password');
     
+    // Add full URL for profile picture if it exists
+    const userResponse = updatedUser.toJSON();
+    if (userResponse.profilePicture) {
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? `https://${req.get('host')}` 
+        : `http://localhost:${process.env.PORT || 5000}`;
+      userResponse.profilePictureUrl = `${baseUrl}/uploads/${userResponse.profilePicture}`;
+    }
+    
     res.status(200).json({
       success: true,
       message: "User updated successfully",
-      user: updatedUser
+      user: userResponse
     });
   } catch (error) {
     console.error("Error updating user:", error);
@@ -285,14 +315,27 @@ export const deleteUser = async (req, res) => {
     console.log(`💀 Hard delete result:`, deleteResult ? `${deleteResult.email} permanently deleted` : 'No user deleted');
 
     // Re-fetch the list of active users to return to the client
-    const updatedUsers = await User.find({ isActive: true })
+    const users = await User.find({ isActive: true })
       .select('-password')
       .sort({ createdAt: -1 });
+    
+    // Add full URL for profile pictures
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? `https://${req.get('host')}` 
+      : `http://localhost:${process.env.PORT || 5000}`;
+    
+    const usersWithUrls = users.map(user => {
+      const userObj = user.toJSON();
+      if (userObj.profilePicture) {
+        userObj.profilePictureUrl = `${baseUrl}/uploads/${userObj.profilePicture}`;
+      }
+      return userObj;
+    });
 
     res.status(200).json({
       success: true,
       message: "User permanently deleted from database",
-      users: updatedUsers
+      users: usersWithUrls
     });
   } catch (error) {
     console.error("Error deleting user:", error);
