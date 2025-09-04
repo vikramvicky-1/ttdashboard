@@ -254,7 +254,7 @@ const Ecommerce = () => {
         {/* Show chart only when a specific month is selected (not 'All' and not date range) */}
         {selectedMonth !== 0 && !isDateRangeActive && (
           <div className="flex gap-6 sm:gap-10 flex-col items-center justify-center mt-6">
-            <div className="bg-white dark:text-gray-200 overflow-hidden dark:bg-secondary-dark-bg shadow-2xl m-2 sm:m-3 p-3 sm:p-4 rounded-2xl w-full max-w-6xl">
+            <div className="bg-white dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl m-2 sm:m-3 p-3 sm:p-4 rounded-2xl w-full max-w-6xl">
               <div className="m-2 p-2 pb-4 md:p-6 lg:p-10 md:m-6 lg:m-10 mt-6 sm:mt-8 md:mt-12 lg:mt-16 md:rounded-3xl dark:bg-secondary-dark-bg rounded-xl bg-gray-200 w-full">
                 <ChartsHeader 
                   category="Sale Report" 
