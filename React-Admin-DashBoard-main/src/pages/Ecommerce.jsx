@@ -338,6 +338,24 @@ const Ecommerce = () => {
                         height: 400px;
                         position: relative;
                       }
+                      
+                      /* Fix chart component touch events */
+                      .chart-inner svg,
+                      .chart-inner .e-chart,
+                      .chart-inner .e-chart-series-collection,
+                      .chart-inner .e-series,
+                      .chart-inner .e-series-group,
+                      .chart-inner rect,
+                      .chart-inner path {
+                        touch-action: pan-x pan-y !important;
+                        pointer-events: none !important;
+                      }
+                      
+                      /* Allow touch events on chart container for scrolling */
+                      .chart-inner {
+                        touch-action: pan-x pan-y !important;
+                        pointer-events: auto !important;
+                      }
                     }
                   `}</style>
                   <div 
@@ -402,9 +420,10 @@ const Ecommerce = () => {
                         }
                       }}
                       zoomSettings={{
-                        enableSelectionZooming: true,
-                        enableScrollbar: true,
+                        enableSelectionZooming: false,
+                        enableScrollbar: false,
                       }}
+                      enableCanvas={false}
                     >
                       <Inject
                         services={[ColumnSeries, Tooltip, Legend, Category]}
