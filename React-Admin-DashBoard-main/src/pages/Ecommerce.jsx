@@ -254,7 +254,7 @@ const Ecommerce = () => {
         {/* Show chart only when a specific month is selected (not 'All' and not date range) */}
         {selectedMonth !== 0 && !isDateRangeActive && (
           <div className="flex gap-6 sm:gap-10 flex-col items-center justify-center mt-6">
-            <div className="bg-white dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl m-2 sm:m-3 p-3 sm:p-4 rounded-2xl w-full max-w-6xl">
+            <div className="bg-white dark:text-gray-200 overflow-hidden dark:bg-secondary-dark-bg shadow-2xl m-2 sm:m-3 p-3 sm:p-4 rounded-2xl w-full max-w-6xl">
               <div className="m-2 p-2 pb-4 md:p-6 lg:p-10 md:m-6 lg:m-10 mt-6 sm:mt-8 md:mt-12 lg:mt-16 md:rounded-3xl dark:bg-secondary-dark-bg rounded-xl bg-gray-200 w-full">
                 <ChartsHeader 
                   category="Sale Report" 
@@ -263,19 +263,40 @@ const Ecommerce = () => {
                 <div 
                   className="w-full chart-container relative" 
                   style={{ 
-                    scrollbarWidth: "none", 
-                    msOverflowStyle: "none"
+                    scrollbarWidth: "thin", 
+                    msOverflowStyle: "auto"
                   }}
                 >
                   <style>{`
                     .chart-container::-webkit-scrollbar {
-                      display: none;
+                      width: 8px;
+                      height: 8px;
                     }
+                    
+                    .chart-container::-webkit-scrollbar-track {
+                      background: rgba(0, 0, 0, 0.1);
+                      border-radius: 4px;
+                    }
+                    
+                    .chart-container::-webkit-scrollbar-thumb {
+                      background: ${currentColor};
+                      border-radius: 4px;
+                      opacity: 0.7;
+                    }
+                    
+                    .chart-container::-webkit-scrollbar-thumb:hover {
+                      background: ${currentColor};
+                      opacity: 1;
+                    }
+                    
                     
                     /* Desktop - no scroll, fit to container */
                     @media (min-width: 1024px) {
                       .chart-container {
                         overflow: visible;
+                      }
+                      .chart-container::-webkit-scrollbar {
+                        display: none;
                       }
                       .chart-inner {
                         width: 100% !important;
@@ -283,17 +304,33 @@ const Ecommerce = () => {
                       }
                     }
                     
-                    /* Mobile/Tablet - enable horizontal scroll with proper touch handling */
+                    /* Mobile/Tablet - enable horizontal scroll with visible scrollbar */
                     @media (max-width: 1023px) {
                       .chart-container {
-                        overflow-x: scroll;
-                        overflow-y: visible;
+                        overflow-x: scroll !important;
+                        overflow-y: visible !important;
                         -webkit-overflow-scrolling: touch;
                         scroll-behavior: smooth;
-                        touch-action: pan-x;
+                        touch-action: pan-x pan-y;
                         position: relative;
                         z-index: 1;
                         height: 420px;
+                        scrollbar-width: thin;
+                        scrollbar-color: ${currentColor} rgba(0, 0, 0, 0.1);
+                      }
+                      .chart-container::-webkit-scrollbar {
+                        width: 12px !important;
+                        height: 12px !important;
+                        display: block !important;
+                      }
+                      .chart-container::-webkit-scrollbar-track {
+                        background: rgba(0, 0, 0, 0.1) !important;
+                        border-radius: 6px !important;
+                      }
+                      .chart-container::-webkit-scrollbar-thumb {
+                        background: ${currentColor} !important;
+                        border-radius: 6px !important;
+                        opacity: 1 !important;
                       }
                       .chart-inner {
                         min-width: 1600px !important;
@@ -301,44 +338,11 @@ const Ecommerce = () => {
                         height: 400px;
                         position: relative;
                       }
-                      
-                      /* Allow page scroll when touching outside chart bars */
-                      .chart-container {
-                        isolation: isolate;
-                      }
-                      
-                      /* Specific handling for chart elements */
-                      .chart-container .e-chart {
-                        touch-action: pan-x;
-                      }
-                      
-                      /* Allow vertical scroll on chart background but horizontal on bars */
-                      .chart-container svg {
-                        touch-action: pan-x;
-                      }
                     }
                   `}</style>
                   <div 
                     className="chart-inner" 
                     style={{ width: "100%", height: "400px" }}
-                    onTouchStart={(e) => {
-                      // Allow horizontal scroll on chart, vertical scroll on page
-                      const touch = e.touches[0];
-                      e.currentTarget.startX = touch.clientX;
-                      e.currentTarget.startY = touch.clientY;
-                    }}
-                    onTouchMove={(e) => {
-                      if (!e.currentTarget.startX || !e.currentTarget.startY) return;
-                      
-                      const touch = e.touches[0];
-                      const deltaX = Math.abs(touch.clientX - e.currentTarget.startX);
-                      const deltaY = Math.abs(touch.clientY - e.currentTarget.startY);
-                      
-                      // If horizontal movement is greater, prevent page scroll
-                      if (deltaX > deltaY) {
-                        e.stopPropagation();
-                      }
-                    }}
                   >
                     <ChartComponent
                       id="DailySalesChart"

@@ -5,7 +5,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { MdOutlineCancel } from "react-icons/md";
 import { SiShopware } from "react-icons/si";
 import { AiOutlineMenu, AiOutlinePlusCircle } from "react-icons/ai";
-import { FiDatabase } from "react-icons/fi";
+import { FiDatabase, FiCalendar } from "react-icons/fi";
 import { TooltipComponent } from "@syncfusion/ej2-react-popups";
 import { links } from "../data/dummy";
 // Removed: import gsap from "gsap";
@@ -49,9 +49,10 @@ const Sidebar = () => {
             <Link
               to="/"
               onClick={handleCloseSidebar}
-              className="items-center gap-3 flex text-2xl font-extrabold tracking-tight dark:text-white text-slate-900"
+              className="items-center gap-3 flex text-xl font-extrabold tracking-tight dark:text-white text-slate-900 whitespace-nowrap"
             >
-              <SiShopware /> <span>GMS</span>
+              <img src="/dashboard.png" alt="Daily Docket" className="w-8 h-8" />
+              <span>Daily Docket</span>
             </Link>
             <TooltipComponent content="Close Sidebar" position="BottomCenter">
               <button
@@ -70,9 +71,10 @@ const Sidebar = () => {
             <Link
               to="/"
               onClick={handleCloseSidebar}
-              className="items-center gap-3 flex text-4xl font-extrabold tracking-tight dark:text-white text-slate-900"
+              className="items-center gap-3 flex text-2xl font-extrabold tracking-tight dark:text-white text-slate-900 whitespace-nowrap"
             >
-              <SiShopware /> <span>GMS</span>
+              <img src="/dashboard.png" alt="Daily Docket" className="w-10 h-10" />
+              <span>Daily Docket</span>
             </Link>
           </div>
 
