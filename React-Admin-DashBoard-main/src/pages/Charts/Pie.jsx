@@ -62,6 +62,33 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
     fileUrl: "",
     fileName: ""
   });
+
+  // Debug function to log expense data
+  const debugExpenseData = (expenses) => {
+    console.log('🔍 DEBUGGING EXPENSE DATA:');
+    console.log('Total expenses:', expenses.length);
+    if (expenses.length > 0) {
+      const firstExpense = expenses[0];
+      console.log('First expense structure:', firstExpense);
+      console.log('Attachment fields in first expense:', {
+        billAttachment: firstExpense.billAttachment,
+        attachment: firstExpense.attachment,
+        fileUrl: firstExpense.fileUrl,
+        paymentAttachment: firstExpense.paymentAttachment,
+        billAttachmentName: firstExpense.billAttachmentName,
+        attachmentName: firstExpense.attachmentName,
+        fileName: firstExpense.fileName,
+        paymentAttachmentName: firstExpense.paymentAttachmentName
+      });
+    }
+  };
+
+  // Debug expenses when they change
+  useEffect(() => {
+    if (expenses && expenses.length > 0) {
+      debugExpenseData(expenses);
+    }
+  }, [expenses]);
   
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState({
@@ -666,25 +693,49 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
                     {exp.paymentMode || "-"}
                   </td>
                   <td className="border px-3 py-3 whitespace-nowrap text-base">
-                    {(exp.attachment || exp.fileUrl) ? (
-                      <button
-                        className="text-blue-500 hover:text-blue-700 flex items-center gap-1"
-                        onClick={() => {
-                          const fileUrl = exp.attachment || exp.fileUrl;
-                          const fileName = exp.attachmentName || exp.fileName || fileUrl?.split('/').pop() || 'Attachment';
-                          setAttachmentModal({
-                            isOpen: true,
-                            fileUrl: fileUrl,
-                            fileName: fileName
-                          });
-                        }}
-                      >
-                        <FiEye size={16} />
-                        View
-                      </button>
-                    ) : (
-                      "No file"
-                    )}
+                    <div className="flex flex-col gap-1">
+                      {/* Bill Attachment */}
+                      {(exp.billAttachment || exp.attachment || exp.fileUrl) ? (
+                        <button
+                          className="text-blue-500 hover:text-blue-700 flex items-center gap-1 text-sm"
+                          onClick={() => {
+                            const fileUrl = exp.billAttachment || exp.attachment || exp.fileUrl;
+                            const fileName = exp.billAttachmentName || exp.attachmentName || exp.fileName || fileUrl?.split('/').pop() || 'Bill';
+                            setAttachmentModal({
+                              isOpen: true,
+                              fileUrl: fileUrl,
+                              fileName: fileName
+                            });
+                          }}
+                        >
+                          <FiEye size={14} />
+                          Bill
+                        </button>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No Bill</span>
+                      )}
+                      
+                      {/* Payment Attachment */}
+                      {exp.paymentAttachment ? (
+                        <button
+                          className="text-green-500 hover:text-green-700 flex items-center gap-1 text-sm"
+                          onClick={() => {
+                            const fileUrl = exp.paymentAttachment;
+                            const fileName = exp.paymentAttachmentName || fileUrl?.split('/').pop() || 'Payment';
+                            setAttachmentModal({
+                              isOpen: true,
+                              fileUrl: fileUrl,
+                              fileName: fileName
+                            });
+                          }}
+                        >
+                          <FiEye size={14} />
+                          Payment
+                        </button>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No Payment</span>
+                      )}
+                    </div>
                   </td>
                   <td className="border px-3 py-3 whitespace-nowrap text-base">
                     {exp.remarks || exp.remark || "-"}
@@ -1035,7 +1086,7 @@ const ConfirmModal = ({
 const EditExpenseModal = ({ expense, onClose, onSave }) => {
   const { currentColor, currentMode } = useStateContext();
   const { categories, categorySubMap, getExpenseCategories } = useExpenseStore();
-  const [form, setForm] = useState({ ...expense, file: null });
+  const [form, setForm] = useState({ ...expense, billAttachment: null, paymentAttachment: null });
   const [showPaymentMode, setShowPaymentMode] = useState(expense.paymentStatus === "Paid");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -1044,7 +1095,8 @@ const EditExpenseModal = ({ expense, onClose, onSave }) => {
     fileUrl: "",
     fileName: ""
   });
-  const fileInputRef = useRef(null);
+  const billAttachmentRef = useRef(null);
+  const paymentAttachmentRef = useRef(null);
   const [isMounted, setIsMounted] = useState(true);
 
   useEffect(() => {
@@ -1068,7 +1120,8 @@ const EditExpenseModal = ({ expense, onClose, onSave }) => {
     if (name === "paymentStatus") {
       setShowPaymentMode(value === "Paid");
       if (value !== "Paid") {
-        setForm((prev) => ({ ...prev, paymentMode: "" }));
+        setForm((prev) => ({ ...prev, paymentMode: "", paymentAttachment: null }));
+        if (paymentAttachmentRef.current) paymentAttachmentRef.current.value = "";
       }
     }
     if (name === "category") {
@@ -1092,9 +1145,11 @@ const EditExpenseModal = ({ expense, onClose, onSave }) => {
       const submitData = { ...form };
       if (submitData.paymentStatus !== "Paid") {
         delete submitData.paymentMode;
+        delete submitData.paymentAttachment;
       }
       await onSave(expense._id, submitData);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (billAttachmentRef.current) billAttachmentRef.current.value = "";
+      if (paymentAttachmentRef.current) paymentAttachmentRef.current.value = "";
       onClose(); // Ensure modal closes after successful update
     } catch (err) {
       console.error("Update expense error:", err);
@@ -1260,30 +1315,30 @@ const EditExpenseModal = ({ expense, onClose, onSave }) => {
               </div>
               <div className="mb-4">
                 <label
-                  htmlFor="editExpenseFile"
+                  htmlFor="editBillAttachment"
                   className="block mb-1 font-medium"
                 >
-                  File Attachment
+                  Bill Attachment
                 </label>
                 <input
                   type="file"
-                  id="editExpenseFile"
-                  name="file"
+                  id="editBillAttachment"
+                  name="billAttachment"
                   accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   onChange={handleChange}
                   className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400 bg-inherit"
-                  ref={fileInputRef}
+                  ref={billAttachmentRef}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Allowed: Images, PDFs, Word files. Max size: 10MB.
+                  Upload bill/invoice. Allowed: Images, PDFs, Word files. Max size: 10MB.
                 </p>
-                {(expense.attachment || expense.fileUrl) && !form.file && (
+                {(expense.billAttachment || expense.attachment || expense.fileUrl) && !form.billAttachment && (
                   <div className="mt-2 flex gap-2">
                     <button
                       type="button"
                       onClick={() => {
-                        const fileUrl = expense.attachment || expense.fileUrl;
-                        const fileName = expense.attachmentName || expense.fileName || fileUrl?.split('/').pop() || 'Current File';
+                        const fileUrl = expense.billAttachment || expense.attachment || expense.fileUrl;
+                        const fileName = expense.billAttachmentName || expense.attachmentName || expense.fileName || fileUrl?.split('/').pop() || 'Current Bill';
                         setAttachmentModal({
                           isOpen: true,
                           fileUrl: fileUrl,
@@ -1293,7 +1348,7 @@ const EditExpenseModal = ({ expense, onClose, onSave }) => {
                       className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1"
                     >
                       <FiEye size={16} />
-                      View Current File
+                      View Current Bill
                     </button>
                   </div>
                 )}
@@ -1353,6 +1408,48 @@ const EditExpenseModal = ({ expense, onClose, onSave }) => {
                       </option>
                     ))}
                   </select>
+                </div>
+              )}
+              {showPaymentMode && (
+                <div className="mb-4">
+                  <label
+                    htmlFor="editPaymentAttachment"
+                    className="block mb-1 font-medium"
+                  >
+                    Payment Attachment
+                  </label>
+                  <input
+                    type="file"
+                    id="editPaymentAttachment"
+                    name="paymentAttachment"
+                    accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400 bg-inherit"
+                    ref={paymentAttachmentRef}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Upload payment proof/receipt. Allowed: Images, PDFs, Word files. Max size: 10MB.
+                  </p>
+                  {expense.paymentAttachment && !form.paymentAttachment && (
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const fileUrl = expense.paymentAttachment;
+                          const fileName = expense.paymentAttachmentName || fileUrl?.split('/').pop() || 'Current Payment';
+                          setAttachmentModal({
+                            isOpen: true,
+                            fileUrl: fileUrl,
+                            fileName: fileName
+                          });
+                        }}
+                        className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-1"
+                      >
+                        <FiEye size={16} />
+                        View Current Payment
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

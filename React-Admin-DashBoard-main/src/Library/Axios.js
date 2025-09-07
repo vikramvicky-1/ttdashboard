@@ -11,6 +11,28 @@ export const getImageBaseUrl = () => {
   return axiosInstance.defaults.baseURL.replace('/api', '');
 };
 
+// Export function to get full attachment URL
+export const getAttachmentUrl = (attachmentPath) => {
+  if (!attachmentPath) return '';
+  
+  // If URL already includes http/https, return as is
+  if (attachmentPath.startsWith('http://') || attachmentPath.startsWith('https://')) {
+    return attachmentPath;
+  }
+  
+  // If URL starts with blob: (for newly uploaded files), return as is
+  if (attachmentPath.startsWith('blob:')) {
+    return attachmentPath;
+  }
+  
+  // Get base URL without /api
+  const baseUrl = getImageBaseUrl();
+  
+  // Ensure proper URL construction
+  const cleanPath = attachmentPath.startsWith('/') ? attachmentPath : `/${attachmentPath}`;
+  return `${baseUrl}${cleanPath}`;
+};
+
 // Add request interceptor to include auth token
 axiosInstance.interceptors.request.use(
   (config) => {

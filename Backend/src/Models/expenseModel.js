@@ -41,7 +41,8 @@ const expenseSchema = new mongoose.Schema(
       },
     },
     remarks: String,
-    fileUrl: String,
+    billAttachment: String,
+    paymentAttachment: String,
   },
   { timestamps: true }
 );

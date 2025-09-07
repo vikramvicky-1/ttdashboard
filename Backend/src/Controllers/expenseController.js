@@ -5,32 +5,47 @@ import path from "path";
 
 export const createExpense = async (req, res) => {
   try {
-    let fileUrl = req.body.fileUrl;
-    if (req.file) {
-      // File uploaded, set fileUrl to public path
-      fileUrl = `/uploads/${req.file.filename}`;
+    let billAttachment = null;
+    let paymentAttachment = null;
+    
+    // Handle file uploads
+    if (req.files) {
+      if (req.files.billAttachment) {
+        billAttachment = `/uploads/${req.files.billAttachment[0].filename}`;
+      }
+      if (req.files.paymentAttachment) {
+        paymentAttachment = `/uploads/${req.files.paymentAttachment[0].filename}`;
+      }
+    }
+
+    // Clean up paymentMode and paymentAttachment for pending status
+    const expenseData = { ...req.body, billAttachment, paymentAttachment };
+    if (expenseData.paymentStatus === "Pending") {
+      expenseData.paymentMode = undefined;
+      expenseData.paymentAttachment = null;
     }
 
     // Validate subcategory if provided
-    if (req.body.subCategory && req.body.category) {
-      const category = await Category.findOne({ name: req.body.category });
+    if (expenseData.subCategory && expenseData.category) {
+      const category = await Category.findOne({ name: expenseData.category });
       if (!category) {
         return res.status(400).json({
-          error: `${req.body.category} is not a valid category.`,
+          error: `${expenseData.category} is not a valid category.`,
         });
       }
       
-      if (!category.subCategories.includes(req.body.subCategory)) {
+      if (!category.subCategories.includes(expenseData.subCategory)) {
         return res.status(400).json({
-          error: `${req.body.subCategory} is not a valid subcategory for the selected category.`,
+          error: `${expenseData.subCategory} is not a valid subcategory for the selected category.`,
         });
       }
     }
 
-    const expense = new Expense({ ...req.body, fileUrl });
+    const expense = new Expense(expenseData);
     await expense.save();
     res.status(201).json({ expense, message: "Expense created successfully" });
   } catch (err) {
+    console.error("Create expense error:", err);
     res.status(400).json({ error: err.message });
   }
 };
@@ -314,6 +329,15 @@ export const getMonthlyExpenseData = async (req, res) => {
       date: { $gte: startDate, $lt: endDate },
     }).lean();
 
+    console.log('📊 MONTHLY EXPENSE DATA - Sample expense:', expenses.length > 0 ? {
+      id: expenses[0]._id,
+      category: expenses[0].category,
+      amount: expenses[0].amount,
+      billAttachment: expenses[0].billAttachment,
+      paymentAttachment: expenses[0].paymentAttachment,
+      hasAttachments: !!(expenses[0].billAttachment || expenses[0].paymentAttachment)
+    } : 'No expenses found');
+
     // Get unique categories
     const categories = [...new Set(expenses.map((exp) => exp.category))];
 
@@ -322,6 +346,38 @@ export const getMonthlyExpenseData = async (req, res) => {
       expenses,
     });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Debug endpoint to check attachment data
+export const debugAttachments = async (req, res) => {
+  try {
+    const expensesWithAttachments = await Expense.find({
+      $or: [
+        { billAttachment: { $exists: true, $ne: null, $ne: "" } },
+        { paymentAttachment: { $exists: true, $ne: null, $ne: "" } }
+      ]
+    }).select('category amount billAttachment paymentAttachment date').limit(10);
+    
+    console.log('🔍 DEBUG ATTACHMENTS - Found expenses with attachments:', expensesWithAttachments.length);
+    expensesWithAttachments.forEach((exp, index) => {
+      console.log(`Expense ${index + 1}:`, {
+        id: exp._id,
+        category: exp.category,
+        amount: exp.amount,
+        billAttachment: exp.billAttachment,
+        paymentAttachment: exp.paymentAttachment,
+        date: exp.date
+      });
+    });
+    
+    res.status(200).json({
+      totalWithAttachments: expensesWithAttachments.length,
+      expenses: expensesWithAttachments
+    });
+  } catch (err) {
+    console.error('Debug attachments error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -354,32 +410,51 @@ export const updateExpense = async (req, res) => {
     const { id } = req.params;
     console.log("Updating expense with ID:", id);
     console.log("Request body:", req.body);
-    console.log("Request file:", req.file);
+    console.log("Request files:", req.files);
 
     let expense = await Expense.findById(id);
     if (!expense) {
       return res.status(404).json({ error: "Expense not found" });
     }
-    let fileUrl = expense.fileUrl;
-    // If a new file is uploaded, replace the old one
-    if (req.file) {
-      // Remove old file if present
-      if (expense.fileUrl) {
-        const oldFilePath = path.resolve(
-          "./uploads" + expense.fileUrl.replace("/uploads", "")
-        );
-        if (fs.existsSync(oldFilePath)) {
-          fs.unlinkSync(oldFilePath);
-        }
-      }
-      fileUrl = `/uploads/${req.file.filename}`;
-    }
-    // Update fields
-    const updateData = { ...req.body, fileUrl };
 
-    // Clean up paymentMode for pending status
+    let billAttachment = expense.billAttachment;
+    let paymentAttachment = expense.paymentAttachment;
+    
+    // Handle file uploads
+    if (req.files) {
+      if (req.files.billAttachment) {
+        // Remove old bill attachment if present
+        if (expense.billAttachment) {
+          const oldFilePath = path.resolve(
+            "./uploads" + expense.billAttachment.replace("/uploads", "")
+          );
+          if (fs.existsSync(oldFilePath)) {
+            fs.unlinkSync(oldFilePath);
+          }
+        }
+        billAttachment = `/uploads/${req.files.billAttachment[0].filename}`;
+      }
+      if (req.files.paymentAttachment) {
+        // Remove old payment attachment if present
+        if (expense.paymentAttachment) {
+          const oldFilePath = path.resolve(
+            "./uploads" + expense.paymentAttachment.replace("/uploads", "")
+          );
+          if (fs.existsSync(oldFilePath)) {
+            fs.unlinkSync(oldFilePath);
+          }
+        }
+        paymentAttachment = `/uploads/${req.files.paymentAttachment[0].filename}`;
+      }
+    }
+
+    // Update fields
+    const updateData = { ...req.body, billAttachment, paymentAttachment };
+
+    // Clean up paymentMode and paymentAttachment for pending status
     if (updateData.paymentStatus === "Pending") {
       updateData.paymentMode = undefined;
+      updateData.paymentAttachment = undefined;
     }
 
     // Validate subcategory if provided
@@ -403,8 +478,7 @@ export const updateExpense = async (req, res) => {
       updateData.amount = Number(updateData.amount);
     if (updateData.date !== undefined)
       updateData.date = new Date(updateData.date);
-    // Remove fileUrl if not present in update
-    if (!fileUrl) delete updateData.fileUrl;
+    
     console.log("Update data:", updateData);
     expense = await Expense.findByIdAndUpdate(id, updateData, {
       new: true,
@@ -650,6 +724,15 @@ export const getDateRangeExpenseData = async (req, res) => {
     const expenses = await Expense.find({
       date: { $gte: startDate, $lte: endDate },
     }).lean();
+
+    console.log('📊 DATE RANGE EXPENSE DATA - Sample expense:', expenses.length > 0 ? {
+      id: expenses[0]._id,
+      category: expenses[0].category,
+      amount: expenses[0].amount,
+      billAttachment: expenses[0].billAttachment,
+      paymentAttachment: expenses[0].paymentAttachment,
+      hasAttachments: !!(expenses[0].billAttachment || expenses[0].paymentAttachment)
+    } : 'No expenses found');
 
     // Get unique categories
     const categories = [...new Set(expenses.map((exp) => exp.category))];

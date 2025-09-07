@@ -18,7 +18,8 @@ const AddExpense = () => {
     paymentStatus: "",
     paymentMode: "",
     remarks: "",
-    file: null,
+    billAttachment: null,
+    paymentAttachment: null,
   });
   const [showPaymentMode, setShowPaymentMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -28,7 +29,8 @@ const AddExpense = () => {
     fileUrl: "",
     fileName: ""
   });
-  const fileInputRef = useRef(null);
+  const billAttachmentRef = useRef(null);
+  const paymentAttachmentRef = useRef(null);
 
   // Fetch categories on mount
   React.useEffect(() => {
@@ -44,7 +46,8 @@ const AddExpense = () => {
     if (name === "paymentStatus") {
       setShowPaymentMode(value === "Paid");
       if (value !== "Paid") {
-        setForm((prev) => ({ ...prev, paymentMode: "" }));
+        setForm((prev) => ({ ...prev, paymentMode: "", paymentAttachment: null }));
+        if (paymentAttachmentRef.current) paymentAttachmentRef.current.value = "";
       }
     }
     if (name === "category") {
@@ -67,10 +70,11 @@ const AddExpense = () => {
     }
     setSubmitting(true);
     try {
-      // Only send paymentMode if paymentStatus is Paid
+      // Only send paymentMode and paymentAttachment if paymentStatus is Paid
       const submitData = { ...form };
       if (submitData.paymentStatus !== "Paid") {
         delete submitData.paymentMode;
+        delete submitData.paymentAttachment;
       }
       await addExpense(submitData);
       setForm({
@@ -81,10 +85,12 @@ const AddExpense = () => {
         paymentStatus: "",
         paymentMode: "",
         remarks: "",
-        file: null,
+        billAttachment: null,
+        paymentAttachment: null,
       });
       setShowPaymentMode(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (billAttachmentRef.current) billAttachmentRef.current.value = "";
+      if (paymentAttachmentRef.current) paymentAttachmentRef.current.value = "";
     } catch (err) {
       // error toast handled in store
     } finally {
@@ -237,28 +243,28 @@ const AddExpense = () => {
                 ></textarea>
               </div>
               <div className="mb-4">
-                <label htmlFor="expenseFile" className="block mb-1 font-medium">
-                  File Attachment
+                <label htmlFor="billAttachment" className="block mb-1 font-medium">
+                  Bill Attachment
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="file"
-                    id="expenseFile"
-                    name="file"
+                    id="billAttachment"
+                    name="billAttachment"
                     accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     onChange={handleChange}
-                    ref={fileInputRef}
+                    ref={billAttachmentRef}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  {form.file && (
+                  {form.billAttachment && (
                     <button
                       type="button"
                       onClick={() => {
-                        const fileUrl = URL.createObjectURL(form.file);
+                        const fileUrl = URL.createObjectURL(form.billAttachment);
                         setAttachmentModal({
                           isOpen: true,
                           fileUrl: fileUrl,
-                          fileName: form.file.name
+                          fileName: form.billAttachment.name
                         });
                       }}
                       className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1"
@@ -269,7 +275,7 @@ const AddExpense = () => {
                   )}
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Allowed: Images, PDFs, Word files. Max size: 10MB.
+                  Upload bill/invoice. Allowed: Images, PDFs, Word files. Max size: 10MB.
                 </p>
               </div>
             </div>
@@ -327,6 +333,44 @@ const AddExpense = () => {
                       </option>
                     ))}
                   </select>
+                </div>
+              )}
+              {showPaymentMode && (
+                <div className="mb-4">
+                  <label htmlFor="paymentAttachment" className="block mb-1 font-medium">
+                    Payment Attachment
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="file"
+                      id="paymentAttachment"
+                      name="paymentAttachment"
+                      accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      onChange={handleChange}
+                      ref={paymentAttachmentRef}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {form.paymentAttachment && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const fileUrl = URL.createObjectURL(form.paymentAttachment);
+                          setAttachmentModal({
+                            isOpen: true,
+                            fileUrl: fileUrl,
+                            fileName: form.paymentAttachment.name
+                          });
+                        }}
+                        className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1"
+                      >
+                        <FiEye size={16} />
+                        View
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Upload payment proof/receipt. Allowed: Images, PDFs, Word files. Max size: 10MB.
+                  </p>
                 </div>
               )}
             </div>

@@ -47,6 +47,7 @@ const DropDown = ({ currentMode }) => (
 const Ecommerce = () => {
   const { currentColor, currentMode } = useStateContext();
   const { permissions } = useRole();
+  const [isMobile, setIsMobile] = useState(false);
   const {
     selectedMonth,
     selectedYear,
@@ -77,6 +78,18 @@ const Ecommerce = () => {
     dailySalesData,
     dailySalesTotal,
   } = useSalesStore();
+
+  // Check for mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 1023);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -116,16 +129,7 @@ const Ecommerce = () => {
     isDateRangeActive,
     fromDate,
     toDate,
-    dataRefreshTrigger, // Add this to trigger refresh when filters change
-    getDateRangeExpense,
-    getDateRangeLoansExpense,
-    getDateRangeTotalSales,
-    getYearlyExpenseSummary,
-    getYearlySales,
-    getMonthlyExpense,
-    getTotalLoansExpense,
-    getTotalSales,
-    getDailySalesData
+    dataRefreshTrigger // Only state values, no function references
   ]);
 
   // Use yearly or monthly data based on selection
@@ -173,7 +177,10 @@ const Ecommerce = () => {
           {permissions.canSeeAllCards && (
             <>
               {/* In Hand Card */}
-              <div className="bg-white dark:text-gray-500 dark:bg-secondary-dark-bg shadow-2xl h-44 rounded-xl w-full p-8 pt-9 bg-hero-pattern bg-no-repeat bg-cover bg-center flex flex-col justify-between ecommerce-card">
+              <div 
+                className="bg-white dark:text-gray-500 dark:bg-secondary-dark-bg shadow-2xl h-44 rounded-xl w-full p-8 pt-9 bg-hero-pattern bg-no-repeat bg-cover bg-center flex flex-col justify-between ecommerce-card relative group"
+                title="Available cash after expenses: (Sales + Loans) - Expenses"
+              >
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-bold text-black text-xl">In Hand</p>
@@ -197,13 +204,19 @@ const Ecommerce = () => {
                     <FaRupeeSign />
                   </button>
                 </div>
+                {/* Mobile Tooltip */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10 whitespace-nowrap lg:hidden">
+                  Available cash: (Sales + Loans) - Expenses
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                </div>
               </div>
               {/* Earnings Cards */}
               {earningData(displayExpense, displayLoans, displaySales).map(
                 (item) => (
                   <div
                     key={item.title}
-                    className="bg-white h-44 dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl w-full p-4 pt-4 rounded-xl flex flex-col justify-between ecommerce-card"
+                    className="bg-white h-44 dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl w-full p-4 pt-4 rounded-xl flex flex-col justify-between ecommerce-card relative group"
+                    title={`${item.title}: ${item.amount}`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <p className="font-bold text-base text-gray-700 dark:text-gray-200">
@@ -230,6 +243,11 @@ const Ecommerce = () => {
                       >
                         {item.percentage}
                       </span>
+                    </div>
+                    {/* Mobile Tooltip */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10 whitespace-nowrap lg:hidden">
+                      {item.title}: {item.amount}
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
                     </div>
                   </div>
                 )
@@ -304,19 +322,20 @@ const Ecommerce = () => {
                       }
                     }
                     
-                    /* Mobile/Tablet - enable horizontal scroll with visible scrollbar */
+                    /* Mobile/Tablet - enable swipe-only scrolling */
                     @media (max-width: 1023px) {
                       .chart-container {
-                        overflow-x: scroll !important;
-                        overflow-y: visible !important;
+                        overflow-x: auto !important;
+                        overflow-y: hidden !important;
                         -webkit-overflow-scrolling: touch;
                         scroll-behavior: smooth;
-                        touch-action: pan-x pan-y;
+                        touch-action: pan-x;
                         position: relative;
                         z-index: 1;
                         height: 420px;
                         scrollbar-width: thin;
                         scrollbar-color: ${currentColor} rgba(0, 0, 0, 0.1);
+                        cursor: default;
                       }
                       .chart-container::-webkit-scrollbar {
                         width: 12px !important;
@@ -339,22 +358,54 @@ const Ecommerce = () => {
                         position: relative;
                       }
                       
-                      /* Fix chart component touch events */
+                      /* Enable swipe scrolling only on mobile */
                       .chart-inner svg,
                       .chart-inner .e-chart,
                       .chart-inner .e-chart-series-collection,
                       .chart-inner .e-series,
-                      .chart-inner .e-series-group,
-                      .chart-inner rect,
-                      .chart-inner path {
-                        touch-action: pan-x pan-y !important;
-                        pointer-events: none !important;
+                      .chart-inner .e-series-group {
+                        touch-action: pan-x !important;
+                        pointer-events: auto !important;
                       }
                       
-                      /* Allow touch events on chart container for scrolling */
-                      .chart-inner {
-                        touch-action: pan-x pan-y !important;
+                      /* Enable tooltip interaction on bars */
+                      .chart-inner rect,
+                      .chart-inner path,
+                      .chart-inner .e-series-point {
+                        touch-action: none !important;
                         pointer-events: auto !important;
+                      }
+                      
+                      /* Container allows horizontal swipe only */
+                      .chart-inner {
+                        touch-action: pan-x !important;
+                        pointer-events: auto !important;
+                      }
+                      
+                      /* Tooltip specific mobile styles */
+                      .e-tooltip-wrap {
+                        pointer-events: none !important;
+                        z-index: 9999 !important;
+                      }
+                      
+                      /* Enhanced tooltip visibility for mobile and desktop */
+                      .e-tooltip-wrap {
+                        font-size: 14px !important;
+                        padding: 12px 16px !important;
+                        border-radius: 10px !important;
+                        box-shadow: 0 6px 20px rgba(0,0,0,0.25) !important;
+                        backdrop-filter: blur(10px) !important;
+                        -webkit-backdrop-filter: blur(10px) !important;
+                      }
+                      
+                      @media (max-width: 768px) {
+                        .e-tooltip-wrap {
+                          font-size: 16px !important;
+                          padding: 14px 18px !important;
+                          border-radius: 12px !important;
+                          box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
+                          min-width: 160px !important;
+                        }
                       }
                     }
                   `}</style>
@@ -405,15 +456,32 @@ const Ecommerce = () => {
                       legendSettings={{ visible: false }}
                       tooltip={{
                         enable: true,
-                        format: "Day ${point.x}:${point.y}<br/>",
+                        enableMarker: true,
+                        shared: false,
+                        header: "<b>Daily Sales</b>",
+                        border: {
+                          width: 2,
+                          color: currentColor
+                        },
+                        fill: currentMode === "Dark" ? "#33373E" : "#FFFFFF",
+                        textStyle: {
+                          color: currentMode === "Dark" ? "#FFFFFF" : "#000000",
+                          fontFamily: "Segoe UI",
+                          fontSize: "14px",
+                          fontWeight: "500"
+                        },
+                        enableAnimation: true,
+                        animationDuration: 300,
+                        fadeOutDuration: 1000,
+                        format: "Day ${point.x}: ${point.y}"
                       }}
                       width="100%"
                       height="400px"    
                       pointRender={(args) => {
                         const value = args.point.y;
-                        if (value < 5000) {
+                        if (value < 10000) {
                           args.fill = '#fa0202'; // bright Red
-                        } else if (value >= 5000 && value <= 10000) {
+                        } else if (value >= 10000 && value <= 15000) {
                           args.fill = '#fae602'; // bright Yellow
                         } else {
                           args.fill = '#02fa02'; // bright Green
