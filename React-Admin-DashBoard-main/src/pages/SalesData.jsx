@@ -848,7 +848,7 @@ const SalesData = () => {
           Physical: item.physicalCash,
           Transferred: item.cashTransferred,
           Closing: item.closingCash,
-          "Total Sales": item.onlineCash + item.physicalCash,
+          "Total Sales": item.totalSales,
           Remarks: item.remarks || "",
         };
       } else {
@@ -862,6 +862,30 @@ const SalesData = () => {
         };
       }
     });
+
+    // Add total row
+    if (activeTab === "sales" && data.length > 0) {
+      exportData.push({
+        Date: "TOTAL",
+        Opening: data.reduce((sum, sale) => sum + Number(sale.openingCash), 0),
+        Purchase: data.reduce((sum, sale) => sum + Number(sale.purchaseCash), 0),
+        Online: data.reduce((sum, sale) => sum + Number(sale.onlineCash), 0),
+        Physical: data.reduce((sum, sale) => sum + Number(sale.physicalCash), 0),
+        Transferred: data.reduce((sum, sale) => sum + Number(sale.cashTransferred), 0),
+        Closing: data.reduce((sum, sale) => sum + Number(sale.closingCash), 0),
+        "Total Sales": data.reduce((sum, sale) => sum + Number(sale.totalSales), 0),
+        Remarks: "-",
+      });
+    } else if (activeTab === "orders" && data.length > 0) {
+      exportData.push({
+        "Order Date": "TOTAL",
+        Delivery: "-",
+        "Order ID": `${data.length} Orders`,
+        Amount: data.reduce((sum, order) => sum + Number(order.amount), 0),
+        Mode: "-",
+        Remarks: "-",
+      });
+    }
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -920,6 +944,30 @@ const SalesData = () => {
         ];
       }
     });
+
+    // Add total row to PDF table data
+    if (activeTab === "sales" && data.length > 0) {
+      tableData.push([
+        "TOTAL",
+        data.reduce((sum, sale) => sum + Number(sale.openingCash), 0),
+        data.reduce((sum, sale) => sum + Number(sale.purchaseCash), 0),
+        data.reduce((sum, sale) => sum + Number(sale.onlineCash), 0),
+        data.reduce((sum, sale) => sum + Number(sale.physicalCash), 0),
+        data.reduce((sum, sale) => sum + Number(sale.cashTransferred), 0),
+        data.reduce((sum, sale) => sum + Number(sale.closingCash), 0),
+        data.reduce((sum, sale) => sum + Number(sale.totalSales), 0),
+      ]);
+    } else if (activeTab === "orders" && data.length > 0) {
+      tableData.push([
+        "TOTAL",
+        "-",
+        `${data.length} Orders`,
+        data.reduce((sum, order) => sum + Number(order.amount), 0),
+        "-",
+        "-",
+        "-",
+      ]);
+    }
 
     const headers =
       activeTab === "sales"
@@ -983,6 +1031,15 @@ const SalesData = () => {
       },
       margin: { left: 10, right: 10 },
       tableWidth: "wrap",
+      didParseCell: function (data) {
+        // Style the total row
+        if (data.row.index === tableData.length - 1 && tableData.length > 1) {
+          data.cell.styles.fillColor = [220, 220, 220];
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.lineWidth = 0.2;
+          data.cell.styles.lineColor = [100, 100, 100];
+        }
+      },
     });
 
     // Add summary data below the table
@@ -1334,54 +1391,45 @@ const SalesData = () => {
                           </tr>
                         ))
                       )}
+                      {/* Total Row for Sales */}
+                      {filteredSalesData.length > 0 && (
+                        <tr className="bg-gray-200 dark:bg-gray-600 font-bold border-t-2 border-gray-400">
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap text-center">
+                            TOTAL
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap">
+                            ₹{filteredSalesData.reduce((sum, sale) => sum + Number(sale.openingCash), 0).toLocaleString("en-IN")}
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap">
+                            ₹{filteredSalesData.reduce((sum, sale) => sum + Number(sale.purchaseCash), 0).toLocaleString("en-IN")}
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap">
+                            ₹{filteredSalesData.reduce((sum, sale) => sum + Number(sale.onlineCash), 0).toLocaleString("en-IN")}
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap">
+                            ₹{filteredSalesData.reduce((sum, sale) => sum + Number(sale.physicalCash), 0).toLocaleString("en-IN")}
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap">
+                            ₹{filteredSalesData.reduce((sum, sale) => sum + Number(sale.cashTransferred), 0).toLocaleString("en-IN")}
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap">
+                            ₹{filteredSalesData.reduce((sum, sale) => sum + Number(sale.closingCash), 0).toLocaleString("en-IN")}
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-100">
+                            ₹{filteredSalesData.reduce((sum, sale) => sum + Number(sale.totalSales), 0).toLocaleString("en-IN")}
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap text-center">
+                            -
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap text-center">
+                            -
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
 
-                {/* Sales Total */}
-                {filteredSalesData.length > 0 && (
-                  <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                     
-                      <div>
-                        <span className="font-semibold">Total Online:</span>
-                        <div className="text-lg font-bold text-blue-600">
-                          ₹
-                          {filteredSalesData
-                            .reduce(
-                              (sum, sale) => sum + Number(sale.onlineCash),
-                              0
-                            )
-                            .toLocaleString("en-IN")}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="font-semibold">Total Physical:</span>
-                        <div className="text-lg font-bold text-blue-600">
-                          ₹
-                          {filteredSalesData
-                            .reduce(
-                              (sum, sale) => sum + Number(sale.physicalCash),
-                              0
-                            )
-                            .toLocaleString("en-IN")}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="font-semibold">Total Sales:</span>
-                        <div className="text-lg font-bold text-green-600">
-                          ₹
-                          {filteredSalesData
-                            .reduce(
-                              (sum, sale) => sum + Number(sale.totalSales),
-                              0
-                            )
-                            .toLocaleString("en-IN")}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -1605,47 +1653,39 @@ const SalesData = () => {
                           </tr>
                         ))
                       )}
+                      {/* Total Row for Orders */}
+                      {filteredOrdersData.length > 0 && (
+                        <tr className="bg-gray-200 dark:bg-gray-600 font-bold border-t-2 border-gray-400">
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap text-center">
+                            TOTAL
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap text-center">
+                            -
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap text-center">
+                            {filteredOrdersData.length} Orders
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-100">
+                            ₹{filteredOrdersData.reduce((sum, order) => sum + Number(order.amount), 0).toLocaleString("en-IN")}
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap text-center">
+                            -
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap text-center">
+                            -
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap text-center">
+                            -
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-600 px-2 py-3 text-xs sm:text-sm whitespace-nowrap text-center">
+                            -
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
 
-                {/* Orders Total */}
-                {filteredOrdersData.length > 0 && (
-                  <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <span className="font-semibold">Total Orders:</span>
-                        <div className="text-lg font-bold text-blue-600">
-                          {filteredOrdersData.length}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="font-semibold">Total Amount:</span>
-                        <div className="text-lg font-bold text-green-600">
-                          ₹
-                          {filteredOrdersData
-                            .reduce(
-                              (sum, order) => sum + Number(order.amount),
-                              0
-                            )
-                            .toLocaleString("en-IN")}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="font-semibold">Average Order:</span>
-                        <div className="text-lg font-bold text-purple-600">
-                          ₹
-                          {Math.round(
-                            filteredOrdersData.reduce(
-                              (sum, order) => sum + Number(order.amount),
-                              0
-                            ) / filteredOrdersData.length
-                          ).toLocaleString("en-IN")}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
