@@ -9,8 +9,6 @@ import {
   Pie,
   AddExpense,
   Login,
-  DailySale,
-  SalesData,
   ManageCategories,
   ManageUsers,
 } from "./pages";
@@ -135,51 +133,7 @@ export const App = () => {
             }
           />
 
-          <Route
-            path="/daily-sale"
-            element={
-              <ProtectedRoute>
-                <RoleProtectedRoute requiredPermission="canAddSale">
-                  <div className="flex relative dark:bg-main-dark-bg">
-                    <Sidebar />
-                    <div
-                      className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
-                        activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
-                      }`}
-                    >
-                      <Navbar />
-                      <div className="pt-0">
-                        <DailySale />
-                      </div>
-                    </div>
-                  </div>
-                </RoleProtectedRoute>
-              </ProtectedRoute>
-            }
-          />
 
-          <Route
-            path="/sales-data"
-            element={
-              <ProtectedRoute>
-                <RoleProtectedRoute requiredPermission="canViewSalesData">
-                  <div className="flex relative dark:bg-main-dark-bg">
-                    <Sidebar />
-                    <div
-                      className={`dark:bg-main-dark-bg bg-main-bg min-h-screen w-full transition-all duration-300 ${
-                        activeMenu ? "sidebar-expanded" : "sidebar-collapsed"
-                      }`}
-                    >
-                      <Navbar />
-                      <div className="pt-0">
-                        <SalesData />
-                      </div>
-                    </div>
-                  </div>
-                </RoleProtectedRoute>
-              </ProtectedRoute>
-            }
-          />
 
           <Route
             path="/manage-categories"

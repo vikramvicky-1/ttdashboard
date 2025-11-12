@@ -87,7 +87,6 @@ const Sidebar = () => {
                 {item.links.map((link) => {
                   // Role-based visibility logic
                   if (link.linkTo === 'expenses' && !permissions.canViewExpenseData) return null;
-                  if (link.linkTo === 'sales-data' && !permissions.canViewSalesData) return null;
                   if (link.linkTo === 'manage-categories' && !permissions.canManageCategories) return null;
                   if (link.linkTo === 'manage-users' && !permissions.canManageUsers) return null;
                   
@@ -124,17 +123,7 @@ const Sidebar = () => {
                 <span>Add Expense</span>
               </Link>
             )}
-            {permissions.canAddSale && (
-              <Link
-                to="/daily-sale"
-                onClick={handleCloseSidebar}
-                className="flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-white shadow-lg"
-                style={{ background: currentColor }}
-              >
-                <AiOutlinePlusCircle className="text-xl" />
-                <span>Add Sale</span>
-              </Link>
-            )}
+
           </div>
         </>
       )}

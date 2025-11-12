@@ -121,11 +121,6 @@ export const links = [
         linkTo: "expenses",
         icon: <FiPieChart />,
       },
-      {
-        name: "Sales",
-        linkTo: "sales-data",
-        icon: <FiPieChart />,
-      },
     ],
   },
 ];
