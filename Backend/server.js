@@ -26,18 +26,18 @@ const __dirname = path.dirname(__filename);
 // Connect to MongoDB
 connectDB();
 
-
-
 // Middleware
-app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://ttdashboard.onrender.com",
-    "https://ttdashboard04.onrender.com"
-  ],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+      "https://daily-docket-trail.onrender.com",
+      "https://dailydocket-trail.onrender.com",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // Logging middleware for debugging
@@ -47,9 +47,9 @@ app.use((req, res, next) => {
     baseUrl: req.baseUrl,
     path: req.path,
     headers: {
-      authorization: req.headers.authorization ? 'Bearer ***' : 'NONE',
-      'content-type': req.headers['content-type']
-    }
+      authorization: req.headers.authorization ? "Bearer ***" : "NONE",
+      "content-type": req.headers["content-type"],
+    },
   });
   next();
 });
@@ -78,13 +78,17 @@ app.use((req, res) => {
 
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
-  console.log('Available routes:');
-  console.log('- GET /api/categories');
-  console.log('- POST /api/categories');
-  console.log('- PUT /api/categories/:categoryName');
-  console.log('- DELETE /api/categories/:categoryName');
-  console.log('- GET /api/categories/subcategories');
-  console.log('- POST /api/categories/subcategories');
-  console.log('- PUT /api/categories/subcategories/:categoryName/:subCategoryName');
-  console.log('- DELETE /api/categories/subcategories/:categoryName/:subCategoryName');
+  console.log("Available routes:");
+  console.log("- GET /api/categories");
+  console.log("- POST /api/categories");
+  console.log("- PUT /api/categories/:categoryName");
+  console.log("- DELETE /api/categories/:categoryName");
+  console.log("- GET /api/categories/subcategories");
+  console.log("- POST /api/categories/subcategories");
+  console.log(
+    "- PUT /api/categories/subcategories/:categoryName/:subCategoryName"
+  );
+  console.log(
+    "- DELETE /api/categories/subcategories/:categoryName/:subCategoryName"
+  );
 });
