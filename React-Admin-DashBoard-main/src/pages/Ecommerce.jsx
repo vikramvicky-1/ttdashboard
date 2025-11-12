@@ -90,24 +90,24 @@ const Ecommerce = () => {
           </div>
         </div>
       ) : (
-        <div className="m-2 md:m-10 p-4 md:p-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4 w-full ecommerce-cards">
+        <div className="m-1 sm:m-2 md:m-10 p-2 sm:p-4 md:p-10 pt-2 sm:pt-4">
+          <div className="grid grid-cols-1 gap-4 w-full ecommerce-cards">
             <div
-              className="bg-white h-44 dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl w-full p-4 pt-4 rounded-xl flex flex-col justify-between ecommerce-card relative group"
+              className="bg-white h-32 sm:h-40 md:h-44 dark:text-gray-200 dark:bg-secondary-dark-bg shadow-2xl w-full p-3 sm:p-4 rounded-xl flex flex-col justify-between ecommerce-card relative group"
               title="Total monthly expenses"
             >
               <div>
-                <p className="font-bold text-gray-400">Total Expense</p>
+                <p className="font-bold text-xs sm:text-sm md:text-base text-gray-400">Total Expense</p>
               </div>
               <div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-3xl text-black dark:text-white">
+                    <p className="text-lg sm:text-2xl md:text-3xl text-black dark:text-white">
                       ₹{displayExpense ? Number(displayExpense).toLocaleString("en-IN") : "0"}
                     </p>
                   </div>
                   <div
-                    className="text-3xl text-white rounded-full p-4 opacity-0 group-hover:opacity-100 group-hover:bg-red-400 transition-all"
+                    className="text-xl sm:text-2xl md:text-3xl text-white rounded-full p-2 sm:p-3 md:p-4 opacity-0 group-hover:opacity-100 group-hover:bg-red-400 transition-all"
                     style={{ background: currentColor }}
                   >
                     <BsBoxSeam />
