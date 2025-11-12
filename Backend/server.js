@@ -11,7 +11,6 @@ import userRoutes from "./src/Routes/userRoutes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import User from "./src/Models/userModel.js";
-import bcrypt from "bcryptjs";
 
 // Load environment variables
 dotenv.config();
@@ -22,9 +21,6 @@ const PORT = process.env.PORT || 5000;
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Connect to MongoDB
-connectDB();
 
 // Middleware
 app.use(
@@ -76,19 +72,49 @@ app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
-app.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log("Available routes:");
-  console.log("- GET /api/categories");
-  console.log("- POST /api/categories");
-  console.log("- PUT /api/categories/:categoryName");
-  console.log("- DELETE /api/categories/:categoryName");
-  console.log("- GET /api/categories/subcategories");
-  console.log("- POST /api/categories/subcategories");
-  console.log(
-    "- PUT /api/categories/subcategories/:categoryName/:subCategoryName"
-  );
-  console.log(
-    "- DELETE /api/categories/subcategories/:categoryName/:subCategoryName"
-  );
-});
+const ensureDefaultAdmin = async () => {
+  const userCount = await User.estimatedDocumentCount();
+  if (userCount > 0) return;
+
+  await User.create({
+    name: "Admin",
+    email: "admin@cortex.in",
+    password: "cortex2025",
+    role: "admin",
+  });
+
+  console.log("Default admin user created");
+};
+
+const startServer = async () => {
+  await connectDB();
+  await ensureDefaultAdmin();
+
+  const server = app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log("Available routes:");
+    console.log("- GET /api/categories");
+    console.log("- POST /api/categories");
+    console.log("- PUT /api/categories/:categoryName");
+    console.log("- DELETE /api/categories/:categoryName");
+    console.log("- GET /api/categories/subcategories");
+    console.log("- POST /api/categories/subcategories");
+    console.log(
+      "- PUT /api/categories/subcategories/:categoryName/:subCategoryName"
+    );
+    console.log(
+      "- DELETE /api/categories/subcategories/:categoryName/:subCategoryName"
+    );
+  });
+
+  return server;
+};
+
+if (process.env.NODE_ENV !== "test") {
+  startServer().catch((error) => {
+    console.error("Failed to start server:", error);
+    process.exit(1);
+  });
+}
+
+export { startServer };
