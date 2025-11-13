@@ -30,6 +30,7 @@ app.use(
       "http://127.0.0.1:3000",
       "https://daily-docket-trail.onrender.com",
       "https://dailydocket-trail.onrender.com",
+      "https://cortexit.in",
     ],
     credentials: true,
   })
