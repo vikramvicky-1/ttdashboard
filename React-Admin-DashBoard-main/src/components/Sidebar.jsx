@@ -51,7 +51,11 @@ const Sidebar = () => {
               onClick={handleCloseSidebar}
               className="items-center gap-3 flex text-xl font-extrabold tracking-tight dark:text-white text-slate-900 whitespace-nowrap"
             >
-              <img src="/dashboard.png" alt="Daily Docket" className="w-8 h-8" />
+              <img
+                src="/dashboard.png"
+                alt="Daily Docket"
+                className="w-8 h-8"
+              />
               <span>Daily Docket</span>
             </Link>
             <TooltipComponent content="Close Sidebar" position="BottomCenter">
@@ -73,7 +77,11 @@ const Sidebar = () => {
               onClick={handleCloseSidebar}
               className="items-center gap-3 flex text-2xl font-extrabold tracking-tight dark:text-white text-slate-900 whitespace-nowrap"
             >
-              <img src="/dashboard.png" alt="Daily Docket" className="w-10 h-10" />
+              <img
+                src="/dashboard.png"
+                alt="Daily Docket"
+                className="w-10 h-10"
+              />
               <span>Daily Docket</span>
             </Link>
           </div>
@@ -81,15 +89,24 @@ const Sidebar = () => {
           <div className="mt-6 flex-1">
             {links.map((item) => (
               <div key={item.title}>
-                <p className="text-gray-400 dark:text-gray-400 m-3 mt-4 uppercase">
-                  {item.title}
-                </p>
                 {item.links.map((link) => {
                   // Role-based visibility logic
-                  if (link.linkTo === 'expenses' && !permissions.canViewExpenseData) return null;
-                  if (link.linkTo === 'manage-categories' && !permissions.canManageCategories) return null;
-                  if (link.linkTo === 'manage-users' && !permissions.canManageUsers) return null;
-                  
+                  if (
+                    link.linkTo === "expenses" &&
+                    !permissions.canViewExpenseData
+                  )
+                    return null;
+                  if (
+                    link.linkTo === "manage-categories" &&
+                    !permissions.canManageCategories
+                  )
+                    return null;
+                  if (
+                    link.linkTo === "manage-users" &&
+                    !permissions.canManageUsers
+                  )
+                    return null;
+
                   return (
                     <NavLink
                       to={`/${link.linkTo}`}
@@ -123,7 +140,6 @@ const Sidebar = () => {
                 <span>Add Expense</span>
               </Link>
             )}
-
           </div>
         </>
       )}
