@@ -14,9 +14,10 @@ import {
   getDateRangePieChartData,
   getDateRangeExpenseData,
   debugAttachments,
+  debugAllExpenses,
 } from "../Controllers/expenseController.js";
-import { requireAccountantOrAdmin, requireAdmin } from "../MIddlewares/roleMiddleware.js";
-import { authenticateToken } from "../MIddlewares/authMiddleware.js";
+import { requireAccountantOrAdmin, requireAdmin } from "../Middlewares/roleMiddleware.js";
+import { authenticateToken } from "../Middlewares/authMiddleware.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -118,6 +119,9 @@ router.get("/date-range-expense", authenticateToken, requireAccountantOrAdmin, g
 router.get("/date-range-loans-expense", authenticateToken, requireAccountantOrAdmin, getDateRangeLoansExpense);
 router.get("/date-range-pie-chart-data", authenticateToken, requireAccountantOrAdmin, getDateRangePieChartData);
 router.get("/date-range-expense-data", authenticateToken, requireAccountantOrAdmin, getDateRangeExpenseData);
+
+// Debug endpoints
 router.get("/debug-attachments", authenticateToken, requireAccountantOrAdmin, debugAttachments);
+router.get("/debug-all-expenses", authenticateToken, requireAccountantOrAdmin, debugAllExpenses);
 
 export default router;

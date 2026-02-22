@@ -53,7 +53,8 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
     getDateRangePieChartData,
     getDateRangeExpenseData,
   } = useExpenseStore();
-  const [filterCategory, setFilterCategory] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [filterStatus, setFilterStatus] = useState("");
   const [deletingExpenseId, setDeletingExpenseId] = useState(null);
   // Attachment modal state
@@ -149,7 +150,7 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
 
   // Filtering logic (category/status only)
   const filteredExpenses = getSortedExpenses().filter((e) => {
-    const categoryMatch = filterCategory ? e.category === filterCategory : true;
+    const categoryMatch = selectedCategories.length > 0 ? selectedCategories.includes(e.category) : true;
     const statusMatch = filterStatus ? e.paymentStatus === filterStatus : true;
     return categoryMatch && statusMatch;
   });
@@ -165,8 +166,44 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
     });
   };
 
-  // Ref for the table
+  // Handle category checkbox change
+  const handleCategoryChange = (category) => {
+    setSelectedCategories((prev) => {
+      if (prev.includes(category)) {
+        return prev.filter((c) => c !== category);
+      } else {
+        return [...prev, category];
+      }
+    });
+  };
+
+  // Clear all selected categories
+  const clearSelectedCategories = () => {
+    setSelectedCategories([]);
+  };
+
+  // Select all categories
+  const selectAllCategories = () => {
+    setSelectedCategories([...categories]);
+  };
+
+  // Ref for the table and category dropdown
   const tableRef = React.useRef(null);
+  const categoryDropdownRef = React.useRef(null);
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target)) {
+        setShowCategoryDropdown(false);
+      }
+    };
+
+    if (showCategoryDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showCategoryDropdown]);
 
   // Export to Excel
   const handleExportExcel = () => {
@@ -513,27 +550,108 @@ const Table = ({ expenses, categories, selectedMonth, selectedYear }) => {
     >
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <label htmlFor="categoryFilter" className="font-semibold">
-            Category:
+          <label className="font-semibold">
+            Categories:
           </label>
-          <select
-            id="categoryFilter"
-            className="border rounded px-2 py-1 min-w-[120px]"
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            style={{
-              background: currentMode === "Dark" ? "#23272e" : "#fff",
-              color: currentMode === "Dark" ? "#fff" : "#23272e",
-              borderColor: currentColor,
-            }}
-          >
-            <option value="">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
+          <div className="relative" ref={categoryDropdownRef}>
+            <button
+              onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+              className="border-2 rounded-lg px-4 py-2 min-w-[160px] text-left flex items-center justify-between transition-all hover:shadow-md"
+              style={{
+                background: currentMode === "Dark" ? "#2d323b" : "#f9fafb",
+                color: currentMode === "Dark" ? "#e5e7eb" : "#1f2937",
+                borderColor: currentColor,
+              }}
+            >
+              <span className="font-medium">
+                {selectedCategories.length === 0
+                  ? "Select Categories"
+                  : `${selectedCategories.length} selected`}
+              </span>
+              <span className={`text-sm transition-transform ${showCategoryDropdown ? "rotate-180" : ""}`}>
+                ▼
+              </span>
+            </button>
+            
+            {showCategoryDropdown && (
+              <div
+                className={`absolute top-full left-0 mt-2 border-2 rounded-lg shadow-xl z-50 min-w-[240px] overflow-hidden`}
+                style={{
+                  borderColor: currentColor,
+                  background: currentMode === "Dark" ? "#1a1e24" : "#ffffff",
+                }}
+              >
+                <div className="p-3 border-b" style={{
+                  borderColor: currentColor,
+                  background: currentMode === "Dark" ? "#2d323b" : "#f3f4f6",
+                }}>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={selectAllCategories}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                        currentMode === "Dark"
+                          ? "bg-blue-600 hover:bg-blue-700 text-white"
+                          : "bg-blue-500 hover:bg-blue-600 text-white"
+                      }`}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      onClick={clearSelectedCategories}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                        currentMode === "Dark"
+                          ? "bg-gray-600 hover:bg-gray-700 text-white"
+                          : "bg-gray-300 hover:bg-gray-400 text-gray-800"
+                      }`}
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="p-2 max-h-64 overflow-y-auto">
+                  {categories.length === 0 ? (
+                    <div className={`text-center py-4 text-sm ${
+                      currentMode === "Dark" ? "text-gray-400" : "text-gray-500"
+                    }`}>
+                      No categories available
+                    </div>
+                  ) : (
+                    categories.map((cat) => (
+                      <label
+                        key={cat}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${
+                          currentMode === "Dark"
+                            ? "hover:bg-gray-700"
+                            : "hover:bg-gray-100"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedCategories.includes(cat)}
+                          onChange={() => handleCategoryChange(cat)}
+                          className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                        />
+                        <span className={`text-sm font-medium ${
+                          currentMode === "Dark" ? "text-gray-200" : "text-gray-700"
+                        }`}>
+                          {cat}
+                        </span>
+                      </label>
+                    ))
+                  )}
+                </div>
+                
+                {selectedCategories.length > 0 && (
+                  <div className="px-3 py-2 border-t text-xs" style={{ borderColor: currentColor }}>
+                    <span style={{ color: currentColor }} className="font-semibold">
+                      {selectedCategories.length} of {categories.length} selected
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <label htmlFor="statusFilter" className="font-semibold ml-4">
             Status:
           </label>

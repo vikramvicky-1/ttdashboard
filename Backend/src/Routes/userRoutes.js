@@ -1,6 +1,6 @@
 import express from 'express';
-import { authenticateToken } from '../MIddlewares/authMiddleware.js';
-import { requireAdmin } from '../MIddlewares/roleMiddleware.js';
+import { authenticateToken } from '../Middlewares/authMiddleware.js';
+import { requireAdmin } from '../Middlewares/roleMiddleware.js';
 import {
   getUsers,
   getUserById,

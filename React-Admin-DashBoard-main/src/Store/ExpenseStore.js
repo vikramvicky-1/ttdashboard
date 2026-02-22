@@ -429,6 +429,112 @@ const useExpenseStore = create((set, get) => ({
       throw error;
     }
   },
+  // Custom Cards operations
+  getCustomCards: async () => {
+    try {
+      const response = await axiosInstance.get("/custom-cards");
+      return response.data.cards || [];
+    } catch (error) {
+      console.error("Error fetching custom cards:", error);
+      throw error;
+    }
+  },
+  createCustomCard: async (cardData) => {
+    try {
+      const response = await axiosInstance.post("/custom-cards", cardData);
+      toast.success("Custom card created successfully!");
+      get().triggerDataRefresh();
+      return response.data.card;
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.error ||
+          "Failed to create custom card. Please try again."
+      );
+      throw error;
+    }
+  },
+  updateCustomCard: async (cardId, cardData) => {
+    try {
+      const response = await axiosInstance.put(`/custom-cards/${cardId}`, cardData);
+      toast.success("Custom card updated successfully!");
+      get().triggerDataRefresh();
+      return response.data.card;
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.error ||
+          "Failed to update custom card. Please try again."
+      );
+      throw error;
+    }
+  },
+  deleteCustomCard: async (cardId) => {
+    try {
+      await axiosInstance.delete(`/custom-cards/${cardId}`);
+      toast.success("Custom card deleted successfully!");
+      get().triggerDataRefresh();
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.error ||
+          "Failed to delete custom card. Please try again."
+      );
+      throw error;
+    }
+  },
+  // Custom In Hand operations
+  getCustomInHand: async () => {
+    try {
+      const response = await axiosInstance.get("/custom-inhand");
+      return response.data.inHandConfig || { userId: null, selectedCards: [] };
+    } catch (error) {
+      console.error("Error fetching custom in hand config:", error);
+      return { userId: null, selectedCards: [] };
+    }
+  },
+  saveCustomInHand: async (selectedCards) => {
+    try {
+      const response = await axiosInstance.post("/custom-inhand", {
+        selectedCards,
+      });
+      toast.success("Custom in hand formula saved successfully!");
+      get().triggerDataRefresh();
+      return response.data.inHandConfig;
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.error ||
+          "Failed to save custom in hand configuration. Please try again."
+      );
+      throw error;
+    }
+  },
+  updateCustomInHand: async (selectedCards) => {
+    try {
+      const response = await axiosInstance.put("/custom-inhand", {
+        selectedCards,
+      });
+      toast.success("Custom in hand formula updated successfully!");
+      get().triggerDataRefresh();
+      return response.data.inHandConfig;
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.error ||
+          "Failed to update custom in hand configuration. Please try again."
+      );
+      throw error;
+    }
+  },
+  deleteCustomInHand: async () => {
+    try {
+      await axiosInstance.delete("/custom-inhand");
+      toast.success("Custom in hand configuration deleted successfully!");
+      get().triggerDataRefresh();
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.error ||
+          "Failed to delete custom in hand configuration. Please try again."
+      );
+      throw error;
+    }
+  },
 }));
 
 export default useExpenseStore;

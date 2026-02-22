@@ -17,8 +17,8 @@ import {
 } from "../Controllers/salesController.js";
 import { getDailySalesData } from "../Controllers/dailySalesController.js";
 import { getYearlyCombinedSalesData } from "../Controllers/yearlySalesController.js";
-import { requireStaffOrAbove, requireAdmin } from "../MIddlewares/roleMiddleware.js";
-import { authenticateToken } from "../MIddlewares/authMiddleware.js";
+import { requireStaffOrAbove, requireAdmin } from "../Middlewares/roleMiddleware.js";
+import { authenticateToken } from "../Middlewares/authMiddleware.js";
 import multer from "multer";
 import path from "path";
 

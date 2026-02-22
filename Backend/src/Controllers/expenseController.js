@@ -116,19 +116,11 @@ export const getLoansAndInterestsMonthlyTotals = async (req, res) => {
     const startDate = new Date(yearInt, monthInt - 1, 1);
     const endDate = new Date(yearInt, monthInt, 1);
 
+    // Get all Loans & Interests (both Paid and Pending)
     const total = await Expense.aggregate([
       {
         $match: {
           category: "Loans & Interests",
-        },
-      },
-      {
-        $match: {
-          paymentStatus: "Paid",
-        },
-      },
-      {
-        $match: {
           date: { $gte: startDate, $lt: endDate },
         },
       },
@@ -142,10 +134,13 @@ export const getLoansAndInterestsMonthlyTotals = async (req, res) => {
 
     const totalLoansExpense = total.length > 0 ? total[0].totalAmount : 0;
 
+    console.log(`📊 Loans & Interests - Month: ${monthInt}, Year: ${yearInt}, Total: ${totalLoansExpense}`);
+
     res.status(200).json({
       totalLoansExpense,
     });
   } catch (err) {
+    console.error("Get Loans & Interests error:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -255,13 +250,12 @@ export const getYearlyExpenseSummary = async (req, res) => {
     ]);
     const totalAmount = totalResult[0]?.totalAmount || 0;
 
-    // Total yearly Loans & Interests
+    // Total yearly Loans & Interests (both Paid and Pending)
     const loansResult = await Expense.aggregate([
       {
         $match: {
           category: "Loans & Interests",
           date: { $gte: startDate, $lt: endDate },
-          paymentStatus: "Paid",
         },
       },
       {
@@ -272,6 +266,7 @@ export const getYearlyExpenseSummary = async (req, res) => {
       },
     ]);
     const totalLoansExpense = loansResult[0]?.totalAmount || 0;
+    console.log(`📊 Yearly Loans & Interests - Year: ${yearInt}, Total: ${totalLoansExpense}`);
 
     // Category-wise yearly totals (excluding Loans & Interests)
     const expensePieChartData = await Expense.aggregate([
@@ -324,19 +319,60 @@ export const getMonthlyExpenseData = async (req, res) => {
     const startDate = new Date(yearInt, monthInt - 1, 1);
     const endDate = new Date(yearInt, monthInt, 1);
 
-    // Get all expenses for the month
-    const expenses = await Expense.find({
-      date: { $gte: startDate, $lt: endDate },
-    }).lean();
+    // Get current date to identify "latest" month/year
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
 
-    console.log('📊 MONTHLY EXPENSE DATA - Sample expense:', expenses.length > 0 ? {
-      id: expenses[0]._id,
-      category: expenses[0].category,
-      amount: expenses[0].amount,
-      billAttachment: expenses[0].billAttachment,
-      paymentAttachment: expenses[0].paymentAttachment,
-      hasAttachments: !!(expenses[0].billAttachment || expenses[0].paymentAttachment)
-    } : 'No expenses found');
+    // Check if the selected month/year is the current (latest) month
+    const isLatestMonth = (yearInt === currentYear && monthInt === currentMonth);
+
+    let query;
+    if (isLatestMonth) {
+      // For the current month, include:
+      // 1. All expenses (Paid or Pending) originally in this month
+      // 2. All pending expenses from ANY other month (past or future)
+      query = {
+        $or: [
+          { date: { $gte: startDate, $lt: endDate } },
+          { paymentStatus: "Pending" }
+        ]
+      };
+    } else {
+      // For all other months (past or future), show ONLY Paid expenses
+      // Pending expenses are "moved" to the latest month
+      query = {
+        date: { $gte: startDate, $lt: endDate },
+        paymentStatus: "Paid"
+      };
+    }
+
+    // Get all expenses based on the query
+    const expensesRaw = await Expense.find(query).lean();
+
+    // Transform expenses that are pending to show in the current month
+    const expenses = expensesRaw.map(exp => {
+      // If it's a pending expense, it should look and act as if it's in the latest month
+      if (exp.paymentStatus === "Pending") {
+        // Change date to the 1st of the selected (latest) month
+        const newDate = new Date(yearInt, monthInt - 1, 1);
+        
+        // If it was originally from a different month, tag it
+        const expDate = new Date(exp.date);
+        const isFromDifferentMonth = expDate.getMonth() + 1 !== monthInt || expDate.getFullYear() !== yearInt;
+        
+        return { 
+          ...exp, 
+          date: newDate, 
+          isCarryForward: isFromDifferentMonth,
+          originalDate: exp.date 
+        };
+      }
+      return exp;
+    });
+
+    console.log(`📊 MONTHLY EXPENSE DATA - Month: ${monthInt}, Year: ${yearInt}`);
+    console.log(`Total items found: ${expenses.length} (Raw: ${expensesRaw.length})`);
 
     // Get unique categories
     const categories = [...new Set(expenses.map((exp) => exp.category))];
@@ -591,13 +627,12 @@ export const getDateRangeLoansExpense = async (req, res) => {
         .json({ error: "fromDate cannot be greater than toDate" });
     }
 
-    // Get total Loans & Interests for the date range
+    // Get total Loans & Interests for the date range (both Paid and Pending)
     const totalResult = await Expense.aggregate([
       {
         $match: {
           category: "Loans & Interests",
           date: { $gte: startDate, $lte: endDate },
-          paymentStatus: "Paid",
         },
       },
       {
@@ -609,6 +644,8 @@ export const getDateRangeLoansExpense = async (req, res) => {
     ]);
 
     const totalLoansExpense = totalResult[0]?.totalAmount || 0;
+
+    console.log(`📊 Date Range Loans & Interests - ${fromDate} to ${toDate}, Total: ${totalLoansExpense}`);
 
     res.status(200).json({ totalLoansExpense });
   } catch (err) {
@@ -742,6 +779,41 @@ export const getDateRangeExpenseData = async (req, res) => {
       expenses,
     });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Debug endpoint to check all expenses in database
+export const debugAllExpenses = async (req, res) => {
+  try {
+    const allExpenses = await Expense.find({});
+    
+    // Count by category
+    const categoryCounts = {};
+    allExpenses.forEach(exp => {
+      categoryCounts[exp.category] = (categoryCounts[exp.category] || 0) + 1;
+    });
+
+    // Find loans expenses specifically
+    const loansExpenses = await Expense.find({ category: "Loans & Interests" });
+    
+    console.log('🔍 DEBUG ALL EXPENSES:');
+    console.log('Total expenses:', allExpenses.length);
+    console.log('Categories:', categoryCounts);
+    console.log('Loans & Interests count:', loansExpenses.length);
+    if (loansExpenses.length > 0) {
+      console.log('Sample Loans expense:', loansExpenses[0]);
+    }
+
+    res.status(200).json({
+      totalExpenses: allExpenses.length,
+      categoryCounts,
+      loansCount: loansExpenses.length,
+      loansExpenses: loansExpenses.slice(0, 5), // First 5 loans expenses
+      allCategories: Object.keys(categoryCounts)
+    });
+  } catch (err) {
+    console.error("Debug error:", err);
     res.status(500).json({ error: err.message });
   }
 };

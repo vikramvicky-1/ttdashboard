@@ -130,36 +130,30 @@ export const links = [
   },
 ];
 
-export const earningData = (monthlyExpense, totalLoansExpense, totalSales) => [
+export const earningData = (otherExpenses, totalLoansExpense, totalSales) => [
   {
     icon: <FcSalesPerformance />,
     amount: totalSales
       ? `₹ ${Number(totalSales).toLocaleString("en-IN")}`
       : "₹ 0",
-    title: "Total Sale",
+    title: "Total Sales",
+    description: "Revenue from sales & orders",
     iconColor: "#03C9D7",
     iconBg: "#E5FAFB",
     pcColor: "green-600",
+    tooltip: `Total Sales: ₹${Number(totalSales || 0).toLocaleString("en-IN")}`,
   },
   {
     icon: <BsBoxSeam />,
     amount: `₹ ${
-      monthlyExpense ? Number(monthlyExpense).toLocaleString("en-IN") : "0"
+      otherExpenses ? Number(otherExpenses).toLocaleString("en-IN") : "0"
     }`,
-    title: "Total Expense",
+    title: "Operating Expenses",
+    description: "Total expenses excl. Loans & EMI",
     iconColor: "rgb(255, 244, 229)",
     iconBg: "rgb(254, 201, 15)",
     pcColor: "green-600",
-  },
-  {
-    icon: <FiBarChart />,
-    amount: totalLoansExpense
-      ? `₹ ${Number(totalLoansExpense).toLocaleString("en-IN")}`
-      : "₹ 0",
-    title: "Total Loans & Intrest",
-    iconColor: "rgb(228, 106, 118)",
-    iconBg: "rgb(255, 244, 229)",
-    pcColor: "green-600",
+    tooltip: `Operating Expenses: ₹${Number(otherExpenses || 0).toLocaleString("en-IN")}`,
   },
 ];
 
