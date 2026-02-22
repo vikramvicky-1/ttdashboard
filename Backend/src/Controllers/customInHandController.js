@@ -24,9 +24,19 @@ export const saveCustomInHand = async (req, res) => {
     const userId = req.user.id;
     const { selectedCards } = req.body;
 
-    if (!selectedCards || !Array.isArray(selectedCards)) {
+    if (!selectedCards || !Array.isArray(selectedCards) || selectedCards.length === 0) {
       return res.status(400).json({
-        error: "selectedCards must be an array",
+        error: "selectedCards must be a non-empty array",
+      });
+    }
+
+    // Validate all selected cards have required fields
+    const invalidCards = selectedCards.some(
+      (card) => !card.cardId || !card.cardName || !card.operator
+    );
+    if (invalidCards) {
+      return res.status(400).json({
+        error: "All selected cards must have cardId, cardName, and operator",
       });
     }
 
@@ -44,7 +54,7 @@ export const saveCustomInHand = async (req, res) => {
       await inHandConfig.save();
     }
 
-    res.status(200).json({
+    res.status(201).json({
       message: "Custom in hand configuration saved successfully",
       inHandConfig,
     });
@@ -59,9 +69,19 @@ export const updateCustomInHand = async (req, res) => {
     const userId = req.user.id;
     const { selectedCards } = req.body;
 
-    if (!selectedCards || !Array.isArray(selectedCards)) {
+    if (!selectedCards || !Array.isArray(selectedCards) || selectedCards.length === 0) {
       return res.status(400).json({
-        error: "selectedCards must be an array",
+        error: "selectedCards must be a non-empty array",
+      });
+    }
+
+    // Validate all selected cards have required fields
+    const invalidCards = selectedCards.some(
+      (card) => !card.cardId || !card.cardName || !card.operator
+    );
+    if (invalidCards) {
+      return res.status(400).json({
+        error: "All selected cards must have cardId, cardName, and operator",
       });
     }
 

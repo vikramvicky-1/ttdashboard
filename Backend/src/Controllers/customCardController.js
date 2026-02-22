@@ -16,15 +16,32 @@ export const createCustomCard = async (req, res) => {
     const userId = req.user.id;
     const { name, items } = req.body;
 
-    if (!name || !items || items.length === 0) {
+    // Validation
+    if (!name || name.trim() === "") {
       return res.status(400).json({
-        error: "Card name and items are required",
+        error: "Card name is required",
+      });
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        error: "Card must have at least one item",
+      });
+    }
+
+    // Validate all items have required fields
+    const invalidItems = items.some(
+      (item) => !item.category || !item.operator
+    );
+    if (invalidItems) {
+      return res.status(400).json({
+        error: "All items must have category and operator",
       });
     }
 
     const card = new CustomCard({
       userId,
-      name,
+      name: name.trim(),
       items,
     });
 
@@ -45,14 +62,37 @@ export const updateCustomCard = async (req, res) => {
     const { cardId } = req.params;
     const { name, items } = req.body;
 
+    // Validation
+    if (!name || name.trim() === "") {
+      return res.status(400).json({
+        error: "Card name is required",
+      });
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        error: "Card must have at least one item",
+      });
+    }
+
+    // Validate all items have required fields
+    const invalidItems = items.some(
+      (item) => !item.category || !item.operator
+    );
+    if (invalidItems) {
+      return res.status(400).json({
+        error: "All items must have category and operator",
+      });
+    }
+
     const card = await CustomCard.findOne({ _id: cardId, userId });
 
     if (!card) {
       return res.status(404).json({ error: "Custom card not found" });
     }
 
-    if (name) card.name = name;
-    if (items) card.items = items;
+    card.name = name.trim();
+    card.items = items;
     card.updatedAt = new Date();
 
     await card.save();

@@ -218,9 +218,20 @@ const CustomCardModal = ({
   currentColor,
   currentMode,
   loading,
+  editingCard = null,
 }) => {
   const [cardName, setCardName] = useState("");
   const [cardItems, setCardItems] = useState([{ category: "", operator: "+" }]);
+
+  useEffect(() => {
+    if (editingCard) {
+      setCardName(editingCard.name);
+      setCardItems(editingCard.items);
+    } else {
+      setCardName("");
+      setCardItems([{ category: "", operator: "+" }]);
+    }
+  }, [editingCard, isOpen]);
 
   const handleAddItem = () => {
     setCardItems([...cardItems, { category: "", operator: "+" }]);
@@ -245,7 +256,11 @@ const CustomCardModal = ({
       alert("Please select categories for all items");
       return;
     }
-    onSave({ name: cardName, items: cardItems });
+    const data = { name: cardName, items: cardItems };
+    if (editingCard) {
+      data.cardId = editingCard._id;
+    }
+    onSave(data);
     setCardName("");
     setCardItems([{ category: "", operator: "+" }]);
   };
@@ -262,7 +277,9 @@ const CustomCardModal = ({
         }`}
       >
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-3xl font-bold">Create Custom Card</h2>
+          <h2 className="text-3xl font-bold">
+            {editingCard ? "Edit Custom Card" : "Create Custom Card"}
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-2xl"
@@ -377,7 +394,13 @@ const CustomCardModal = ({
             style={{ background: currentColor }}
             className="px-6 py-3 rounded-lg text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
           >
-            {loading ? "Creating..." : "Create Card"}
+            {loading
+              ? editingCard
+                ? "Saving..."
+                : "Creating..."
+              : editingCard
+                ? "Save Changes"
+                : "Create Card"}
           </button>
         </div>
       </div>
@@ -392,6 +415,7 @@ const Ecommerce = () => {
   const [customCards, setCustomCards] = useState([]);
   const [showCardModal, setShowCardModal] = useState(false);
   const [cardModalLoading, setCardModalLoading] = useState(false);
+  const [editingCard, setEditingCard] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState({
     isOpen: false,
     cardId: null,
@@ -426,10 +450,12 @@ const Ecommerce = () => {
     monthlyExpenseData,
     getCustomCards,
     createCustomCard,
+    updateCustomCard,
     deleteCustomCard,
     getCustomInHand,
     saveCustomInHand,
     updateCustomInHand,
+    deleteCustomInHand,
   } = useExpenseStore();
 
   const {
@@ -473,6 +499,32 @@ const Ecommerce = () => {
     };
     fetchData();
   }, [permissions.canSeeAllCards, dataRefreshTrigger]);
+
+  // Clean up custom in hand config when custom cards change (e.g., when cards are deleted)
+  useEffect(() => {
+    if (
+      customInHandConfig.selectedCards &&
+      customInHandConfig.selectedCards.length > 0
+    ) {
+      const validCards = customInHandConfig.selectedCards.filter((selectedCard) =>
+        customCards.some((card) => card._id === selectedCard.cardId),
+      );
+
+      // If some cards are no longer valid, update the config
+      if (validCards.length !== customInHandConfig.selectedCards.length) {
+        if (validCards.length === 0) {
+          // All cards deleted, clear config
+          setCustomInHandConfig({ selectedCards: [] });
+        } else {
+          // Update config with only valid cards
+          setCustomInHandConfig({
+            ...customInHandConfig,
+            selectedCards: validCards,
+          });
+        }
+      }
+    }
+  }, [customCards]);
 
   // Fetch expense and sales data based on selected period
   useEffect(() => {
@@ -601,21 +653,42 @@ const Ecommerce = () => {
     return result;
   };
 
-  // Handle save custom card
+  // Handle save custom card (create or update)
   const handleSaveCustomCard = async (cardData) => {
     setCardModalLoading(true);
     try {
-      const newCard = await createCustomCard({
-        name: cardData.name,
-        items: cardData.items,
-      });
-      setCustomCards([...customCards, newCard]);
+      if (cardData.cardId) {
+        // Update existing card
+        const updatedCard = await updateCustomCard(cardData.cardId, {
+          name: cardData.name,
+          items: cardData.items,
+        });
+        setCustomCards(
+          customCards.map((card) =>
+            card._id === cardData.cardId ? updatedCard : card,
+          ),
+        );
+      } else {
+        // Create new card
+        const newCard = await createCustomCard({
+          name: cardData.name,
+          items: cardData.items,
+        });
+        setCustomCards([...customCards, newCard]);
+      }
       setShowCardModal(false);
+      setEditingCard(null);
     } catch (error) {
       console.error("Error saving custom card:", error);
     } finally {
       setCardModalLoading(false);
     }
+  };
+
+  // Handle edit custom card
+  const handleEditCustomCard = (card) => {
+    setEditingCard(card);
+    setShowCardModal(true);
   };
 
   // Handle delete custom card - show confirmation first
@@ -635,6 +708,33 @@ const Ecommerce = () => {
       setCustomCards(
         customCards.filter((card) => card._id !== deleteConfirmation.cardId),
       );
+
+      // Remove deleted card from custom in hand config if it exists
+      if (
+        customInHandConfig.selectedCards &&
+        customInHandConfig.selectedCards.length > 0
+      ) {
+        const updatedSelectedCards = customInHandConfig.selectedCards.filter(
+          (card) => card.cardId !== deleteConfirmation.cardId,
+        );
+
+        if (updatedSelectedCards.length === 0) {
+          // If no cards left, delete the custom in hand config
+          await deleteCustomInHand();
+          setCustomInHandConfig({ selectedCards: [] });
+        } else if (
+          updatedSelectedCards.length <
+          customInHandConfig.selectedCards.length
+        ) {
+          // If some cards were removed, update the config
+          await updateCustomInHand(updatedSelectedCards);
+          setCustomInHandConfig({
+            ...customInHandConfig,
+            selectedCards: updatedSelectedCards,
+          });
+        }
+      }
+
       setDeleteConfirmation({ isOpen: false, cardId: null, cardName: "" });
     } catch (error) {
       console.error("Error deleting custom card:", error);
@@ -659,16 +759,28 @@ const Ecommerce = () => {
     }
   };
 
+  // Get valid selected cards (only those that still exist in customCards)
+  const getValidSelectedCards = () => {
+    if (!customInHandConfig.selectedCards || customInHandConfig.selectedCards.length === 0) {
+      return [];
+    }
+
+    return customInHandConfig.selectedCards.filter((selectedCard) =>
+      customCards.some((card) => card._id === selectedCard.cardId),
+    );
+  };
+
   // Calculate custom in hand value
   const calculateCustomInHandValue = () => {
-    if (!customInHandConfig.selectedCards || customInHandConfig.selectedCards.length === 0) {
+    const validSelectedCards = getValidSelectedCards();
+    if (validSelectedCards.length === 0) {
       return 0;
     }
 
     const categoryValues = expensesByCategory();
     let result = 0;
 
-    customInHandConfig.selectedCards.forEach((item, index) => {
+    validSelectedCards.forEach((item, index) => {
       const card = customCards.find((c) => c._id === item.cardId);
       if (card) {
         const value = calculateCustomCardValue(card.items);
@@ -786,18 +898,24 @@ const Ecommerce = () => {
                     <div className="flex justify-between items-center">
                       <div className="flex-1">
                         <p className="font-bold text-black text-xl">In Hand (Custom)</p>
-                        {customInHandConfig.selectedCards && customInHandConfig.selectedCards.length > 0 ? (
+                        {getValidSelectedCards().length > 0 ? (
                           <>
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                              {customInHandConfig.selectedCards.map((card, idx) => (
-                                <span key={idx}>
-                                  {idx > 0 && ` ${card.operator} `}
-                                  {card.cardName}
-                                </span>
+                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-2 max-w-sm break-words">
+                              {getValidSelectedCards().map((card, idx) => (
+                                <div key={idx} className="inline-flex items-center gap-1.5">
+                                  {idx > 0 && (
+                                    <span className="font-bold text-xs px-1" style={{ color: card.operator === '+' ? '#059669' : '#dc2626' }}>
+                                      {card.operator === '+' ? '+' : '−'}
+                                    </span>
+                                  )}
+                                  <span className="font-semibold truncate" title={card.cardName}>
+                                    {card.cardName}
+                                  </span>
+                                </div>
                               ))}
-                            </p>
+                            </div>
                             <p
-                              className={`text-2xl mt-4 ${
+                              className={`text-2xl mt-4 font-bold ${
                                 calculateCustomInHandValue() <= 0
                                   ? "text-red-500"
                                   : calculateCustomInHandValue() > 0 && calculateCustomInHandValue() <= 50000
@@ -939,20 +1057,29 @@ const Ecommerce = () => {
                     className="bg-white dark:bg-secondary-dark-bg shadow-2xl rounded-3xl overflow-hidden h-auto flex flex-col justify-between ecommerce-card hover:shadow-3xl transition-all duration-300 relative group border border-gray-200 dark:border-gray-700"
                   >
                     <div className="p-6 flex flex-col justify-between h-full">
-                      {/* Header with title and delete button */}
-                      <div className="flex justify-between items-start gap-4 mb-4">
+                      {/* Header with title and action buttons */}
+                      <div className="flex justify-between items-start gap-2 mb-4">
                         <h4 className="font-bold text-lg text-gray-900 dark:text-white flex-1 min-w-0 line-clamp-2">
                           {card.name}
                         </h4>
-                        <button
-                          onClick={() =>
-                            handleDeleteCustomCard(card._id, card.name)
-                          }
-                          className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-100 dark:hover:bg-red-900 dark:hover:bg-opacity-40 transition-all duration-200 hover:scale-110"
-                          title="Delete custom card"
-                        >
-                          <MdDelete size={20} />
-                        </button>
+                        <div className="flex gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => handleEditCustomCard(card)}
+                            className="w-10 h-10 flex items-center justify-center rounded-lg text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900 dark:hover:bg-opacity-40 transition-all duration-200 hover:scale-110"
+                            title="Edit custom card"
+                          >
+                            <MdEdit size={20} />
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleDeleteCustomCard(card._id, card.name)
+                            }
+                            className="w-10 h-10 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-100 dark:hover:bg-red-900 dark:hover:bg-opacity-40 transition-all duration-200 hover:scale-110"
+                            title="Delete custom card"
+                          >
+                            <MdDelete size={20} />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Card Items/Formula */}
@@ -1023,12 +1150,16 @@ const Ecommerce = () => {
           {/* Custom Card Modal */}
           <CustomCardModal
             isOpen={showCardModal}
-            onClose={() => setShowCardModal(false)}
+            onClose={() => {
+              setShowCardModal(false);
+              setEditingCard(null);
+            }}
             categories={categories}
             onSave={handleSaveCustomCard}
             currentColor={currentColor}
             currentMode={currentMode}
             loading={cardModalLoading}
+            editingCard={editingCard}
           />
 
           {/* Delete Confirmation Modal */}
