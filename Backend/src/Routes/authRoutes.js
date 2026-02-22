@@ -1,6 +1,6 @@
 import express from "express";
 import { loginUser, getCurrentUser, logoutUser } from "../Controllers/authController.js";
-import { authenticateToken } from "../Middlewares/authMiddleware.js";
+import { authenticateToken } from "../MIddlewares/authMiddleware.js";
 import User from "../Models/userModel.js";
 import bcrypt from "bcryptjs";
 

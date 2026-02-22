@@ -9,8 +9,8 @@ import {
   updateSubCategory,
   deleteSubCategory
 } from "../Controllers/categoryController.js";
-import { authenticateToken } from "../Middlewares/authMiddleware.js";
-import { requireAdmin } from "../Middlewares/roleMiddleware.js";
+import { authenticateToken } from "../MIddlewares/authMiddleware.js";
+import { requireAdmin } from "../MIddlewares/roleMiddleware.js";
 
 const router = express.Router();
 

@@ -16,8 +16,8 @@ import {
   debugAttachments,
   debugAllExpenses,
 } from "../Controllers/expenseController.js";
-import { requireAccountantOrAdmin, requireAdmin } from "../Middlewares/roleMiddleware.js";
-import { authenticateToken } from "../Middlewares/authMiddleware.js";
+import { requireAccountantOrAdmin, requireAdmin } from "../MIddlewares/roleMiddleware.js";
+import { authenticateToken } from "../MIddlewares/authMiddleware.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";

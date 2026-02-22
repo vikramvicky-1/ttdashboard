@@ -5,7 +5,7 @@ import {
   updateCustomCard,
   deleteCustomCard,
 } from "../Controllers/customCardController.js";
-import { authenticateToken } from "../Middlewares/authMiddleware.js";
+import { authenticateToken } from "../MIddlewares/authMiddleware.js";
 
 const router = express.Router();
 

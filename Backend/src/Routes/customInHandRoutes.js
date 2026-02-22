@@ -5,7 +5,7 @@ import {
   updateCustomInHand,
   deleteCustomInHand,
 } from "../Controllers/customInHandController.js";
-import { authenticateToken } from "../Middlewares/authMiddleware.js";
+import { authenticateToken } from "../MIddlewares/authMiddleware.js";
 
 const router = express.Router();
 
